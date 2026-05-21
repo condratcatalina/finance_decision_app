@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinSight - Prognoză Financiară</title>
+
+    <script>
+        // Garda de securitate - redirecționare dacă nu e logat
+        if (!sessionStorage.getItem('token')) {
+            window.location.href = "/auth";
+        }
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 font-sans h-screen overflow-hidden flex">
+
+    <aside class="w-64 bg-indigo-900 text-white flex-shrink-0 flex flex-col">
+        <div class="p-6 text-2xl font-bold border-b border-indigo-800">
+            Fin<span class="text-indigo-400">Sight</span>
+        </div>
+
+        <nav class="mt-6 flex-1">
+            <a href="/" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
+                <i class="fas fa-chart-pie mr-3"></i> Dashboard
+            </a>
+            <a href="/forecast" class="block py-3 px-6 bg-indigo-800 flex items-center border-l-4 border-indigo-400">
+                <i class="fas fa-chart-line mr-3"></i> Prognoză Cheltuieli
+            </a>
+            <a href="/transactions" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
+                <i class="fas fa-table mr-3"></i> Tranzacții
+            </a>
+            <a href="/converter" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
+                <i class="fas fa-magic mr-3"></i> Convertor Extras
+            </a>
+            <a href="/simulator" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
+                <i class="fas fa-calculator mr-3"></i> Simulator Credit
+            </a>
+            <a href="/profile" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
+                <i class="fas fa-user-circle mr-3"></i> Profilul Meu
+            </a>
+        </nav>
+
+        <div class="p-4 border-t border-indigo-800">
+            <button onclick="logout()" class="w-full flex items-center py-3 px-6 text-red-400 hover:bg-red-900/30 hover:text-red-300 transition rounded-lg">
+                <i class="fas fa-sign-out-alt mr-3"></i> Deconectare
+            </button>
+        </div>
+    </aside>
+
+    <main class="flex-1 overflow-y-auto p-8">
+        <div id="outdated-alert" class="hidden mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded shadow-sm">
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-triangle text-yellow-500 mr-3"></i>
+                <div>
+                    <p class="font-bold text-yellow-800">Datele tale necesită actualizare</p>
+                    <p class="text-sm text-yellow-700">Prognoza a fost calculată de la ultima tranzacție găsită. Încarcă date noi pentru o acuratețe mai mare.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-between items-end mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">Prognoză Financiară</h1>
+                <p class="text-gray-500 italic">Predictibilitate prin Regresie Liniară (Trend)</p>
+            </div>
+            <div class="w-64">
+                <p class="text-[10px] font-bold text-gray-400 uppercase mb-1 tracking-wider">Încredere în prognoză</p>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div id="confidence-bar" class="bg-indigo-500 h-2 rounded-full transition-all duration-1000" style="width: 0%"></div>
+                </div>
+                <p id="confidence-text" class="text-[9px] text-right mt-1 text-gray-500 font-bold uppercase">Se calculează...</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-2 space-y-6">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="font-bold text-gray-700">Evoluție & Estimare Cheltuieli</h3>
+                        <span class="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-1 rounded font-bold uppercase">Marjă eroare 15%</span>
+                    </div>
+                    <div class="h-80">
+                        <canvas id="forecastChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-bold text-gray-400 uppercase mb-1">Acuratețe Model (R²)</p>
+                        <h2 id="r2-val" class="text-3xl font-bold text-gray-800">--%</h2>
+                    </div>
+                    <div class="max-w-xs text-right">
+                        <p id="r2-desc" class="text-sm text-gray-500">Stilul tău de viață este analizat...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div class="bg-indigo-900 text-white p-6 rounded-xl shadow-lg border-b-4 border-indigo-400">
+                    <h3 class="font-bold mb-4 flex items-center">
+                        <i class="fas fa-magic mr-2 text-indigo-300"></i> Simulare: "Ce-ar fi dacă?"
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between text-sm">
+                            <span>Reducere cheltuieli</span>
+                            <span class="font-bold text-indigo-300"><span id="reduce-val">0</span>%</span>
+                        </div>
+                        <input type="range" id="slider-reduce" min="0" max="50" value="0"
+                               class="w-full h-2 bg-indigo-800 rounded-lg appearance-none cursor-pointer accent-indigo-400">
+                        <p class="text-[10px] opacity-60 italic leading-relaxed">
+                            Ajustează procentul pentru a observa impactul unei economii ipotetice asupra trendului tău pe următoarele luni.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <h3 class="font-bold mb-4 text-gray-700 flex items-center">
+                        <i class="fas fa-calendar-plus mr-2 text-green-500"></i> Cheltuieli Planificate
+                    </h3>
+                    <div class="space-y-3">
+                        <input type="text" id="ev-name" placeholder="Ex: Revizie, Vacanță..." class="w-full border p-2 rounded text-sm focus:ring-2 focus:ring-green-400 outline-none">
+                        <div class="relative">
+                            <input type="number" id="ev-sum" placeholder="Sumă estimată" class="w-full border p-2 rounded text-sm focus:ring-2 focus:ring-green-400 outline-none pr-10">
+                            <span class="absolute right-3 top-2 text-gray-400 text-sm">RON</span>
+                        </div>
+                        <select id="ev-month" class="w-full border p-2 rounded text-sm outline-none">
+                            <option value="0">Luna 1 (Prognoză)</option>
+                            <option value="1">Luna 2 (Prognoză)</option>
+                            <option value="2">Luna 3 (Prognoză)</option>
+                        </select>
+                        <button onclick="addEvent()" class="w-full bg-green-500 text-white py-2 rounded font-bold hover:bg-green-600 transition shadow-md">
+                            Adaugă pe Grafic
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const API_URL = window.location.origin;
+        let rawData = null;
+        let chart = null;
+        let events = [];
+
+        // ... Scriptul rămâne neschimbat ...
+        function logout() {
+            sessionStorage.removeItem('token');
+            window.location.href = "/auth";
+        }
+
+        async function loadForecast() {
+            const token = sessionStorage.getItem('token');
+            try {
+                const res = await fetch(`${API_URL}/api/get-forecast-data`, {
+                    headers: {'x-access-token': token}
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    alert(err.error || "Date insuficiente!");
+                    return;
+                }
+
+                rawData = await res.json();
+                updateUI();
+                renderChart();
+            } catch (err) {
+                console.error("Forecast load error:", err);
+            }
+        }
+
+        function updateUI() {
+            const r2 = rawData.metrics.r_squared;
+            document.getElementById('r2-val').innerText = r2 + "%";
+
+            let desc = "Cheltuielile tale sunt foarte fluctuante, prognoza are un caracter informativ.";
+            if(r2 > 50) desc = "Trendul tău este stabil, oferind o bază bună pentru planificare.";
+            if(r2 > 80) desc = "Ai un stil de viață foarte predictibil. Prognoza este de înaltă încredere.";
+            document.getElementById('r2-desc').innerText = desc;
+
+            if(rawData.metrics.is_outdated) {
+                document.getElementById('outdated-alert').classList.remove('hidden');
+            }
+
+            const pts = rawData.metrics.data_points_count;
+            let percent = pts >= 12 ? 100 : (pts >= 6 ? 60 : 30);
+            let text = pts >= 12 ? "Încredere Optimă (An complet)" : (pts >= 6 ? "Încredere Medie" : "Istoric limitat");
+
+            document.getElementById('confidence-bar').style.width = percent + "%";
+            document.getElementById('confidence-text').innerText = text;
+        }
+
+        function addEvent() {
+            const name = document.getElementById('ev-name').value;
+            const sum = parseFloat(document.getElementById('ev-sum').value);
+            const idx = parseInt(document.getElementById('ev-month').value);
+
+            if(!name || isNaN(sum)) return alert("Completează datele evenimentului!");
+
+            events.push({name, sum, idx});
+
+            document.getElementById('ev-name').value = "";
+            document.getElementById('ev-sum').value = "";
+
+            renderChart();
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('forecastChart').getContext('2d');
+            const reduction = 1 - (document.getElementById('slider-reduce').value / 100);
+
+            let finalForecast = rawData.forecast.values.map((v, i) => {
+                let val = v * reduction;
+                events.filter(e => e.idx === i).forEach(e => val += e.sum);
+                return val;
+            });
+
+            const labels = [...rawData.history.labels, ...rawData.forecast.labels];
+
+            const upperBand = finalForecast.map(v => v * 1.15);
+            const lowerBand = finalForecast.map(v => v * 0.85);
+
+            if(chart) chart.destroy();
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Istoric Real (RON)',
+                            data: [...rawData.history.values, ...Array(3).fill(null)],
+                            borderColor: '#4F46E5',
+                            backgroundColor: '#4F46E5',
+                            borderWidth: 3,
+                            pointRadius: 4,
+                            tension: 0.3,
+                            fill: false
+                        },
+                        {
+                            label: 'Trend Estimat (RON)',
+                            data: [...Array(rawData.history.values.length - 1).fill(null),
+                                   rawData.history.values[rawData.history.values.length - 1],
+                                   ...finalForecast],
+                            borderColor: '#F59E0B',
+                            borderWidth: 3,
+                            borderDash: [5, 5],
+                            pointRadius: 5,
+                            pointBackgroundColor: '#F59E0B',
+                            tension: 0.3,
+                            fill: false
+                        },
+                        {
+                            label: 'Interval Confidență',
+                            data: [...Array(rawData.history.values.length).fill(null), ...upperBand],
+                            borderColor: 'transparent',
+                            backgroundColor: 'rgba(245, 158, 11, 0.08)',
+                            fill: '+1',
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Marjă inferioară',
+                            data: [...Array(rawData.history.values.length).fill(null), ...lowerBand],
+                            borderColor: 'transparent',
+                            backgroundColor: 'transparent',
+                            fill: false,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                filter: (item) => !item.text.includes('Confidență') && !item.text.includes('Marjă')
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: '#1e1b4b',
+                            padding: 12,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) label += ': ';
+                                    if (context.parsed.y !== null) {
+                                        label += context.parsed.y.toLocaleString() + ' RON';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: { borderDash: [2, 2] },
+                            ticks: { callback: (value) => value.toLocaleString() + ' RON' }
+                        },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        document.getElementById('slider-reduce').addEventListener('input', (e) => {
+            document.getElementById('reduce-val').innerText = e.target.value;
+            renderChart();
+        });
+
+        window.onload = loadForecast;
+    </script>
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinSight - Profil Utilizator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 font-sans">
+    <script>
+        if (!sessionStorage.getItem('token')) window.location.href = '/auth';
+    </script>
+
+    <div class="flex h-screen overflow-hidden">
+        <aside class="w-64 bg-indigo-900 text-white flex-shrink-0 flex flex-col">
+            <div class="p-6 text-2xl font-bold border-b border-indigo-800">
+                Fin<span class="text-indigo-400">Sight</span>
+            </div>
+            <nav class="mt-6 flex-1">
+                <a href="/" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
+                    <i class="fas fa-chart-pie mr-3"></i> Dashboard
+                </a>
+                <a href="/forecast" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
+                    <i class="fas fa-chart-line mr-3"></i> Prognoză Cheltuieli
+                </a>
+                <a href="/transactions" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
+                    <i class="fas fa-table mr-3"></i> Tranzacții
+                </a>
+                <a href="/converter" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
+                    <i class="fas fa-magic mr-3"></i> Convertor Extras
+                </a>
+                <a href="/simulator" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
+                    <i class="fas fa-calculator mr-3"></i> Simulator Credit
+                </a>
+                <a href="/profile" class="block py-3 px-6 bg-indigo-800 flex items-center border-l-4 border-indigo-400">
+                    <i class="fas fa-user-circle mr-3"></i> Profilul Meu
+                </a>
+            </nav>
+            <div class="p-4 border-t border-indigo-800">
+                <button onclick="logout()" class="w-full flex items-center py-3 px-6 text-red-400 hover:bg-red-900/30 transition rounded-lg">
+                    <i class="fas fa-sign-out-alt mr-3"></i> Deconectare
+                </button>
+            </div>
+        </aside>
+
+        <main class="flex-1 overflow-y-auto p-10">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-800">Setări Profil</h1>
+                        <p class="text-gray-500">Actualizează datele folosite pentru analiza scorului de credit.</p>
+                    </div>
+                    <div class="bg-indigo-100 text-indigo-700 px-4 py-2 rounded-full text-sm font-bold" id="userEmail">
+                        email@exemplu.com
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-8">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Nume Complet / Username</label>
+                                <input type="text" id="username" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-400">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Vârstă</label>
+                                <input type="number" id="varsta" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-400">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Gen</label>
+                                <select id="gen" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-400">
+                                    <option value="0">Masculin</option>
+                                    <option value="1">Feminin</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Nivel Educație</label>
+                                <select id="educatie" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-400">
+                                    <option value="1">Liceu</option>
+                                    <option value="2">Licență</option>
+                                    <option value="3">Master</option>
+                                    <option value="4">Doctorat</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Vechime (Ani de muncă)</label>
+                                <input type="number" id="vechime" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-400">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Tip Locuință</label>
+                                <select id="tip_locuinta" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-400">
+                                    <option value="0">Chirie</option>
+                                    <option value="1">Proprietar</option>
+                                    <option value="2">Locuință de serviciu / Altele</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Vechime Istoric Credit (Ani)</label>
+                                <input type="number" id="ani_istoric_credit" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-400">
+                            </div>
+
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Ai avut întârzieri la plată în trecut?</label>
+                                <select id="istoric_neplata" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-400">
+                                    <option value="0">Nu, am plătit mereu la timp</option>
+                                    <option value="1">Da, am avut incidente de plată</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mt-10 flex justify-end">
+                            <button onclick="saveProfile()" class="px-10 py-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-200">
+                                Salvează Modificările
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+        const token = sessionStorage.getItem('token');
+
+        // ... Scriptul rămâne neschimbat ...
+        async function loadProfile() {
+            try {
+                const res = await fetch(`${API_URL}/get-profile`, {
+                    headers: { 'x-access-token': token }
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    document.getElementById('userEmail').innerText = data.email;
+                    document.getElementById('username').value = data.username;
+                    document.getElementById('varsta').value = data.varsta;
+                    document.getElementById('gen').value = data.gen;
+                    document.getElementById('educatie').value = data.educatie;
+                    document.getElementById('vechime').value = data.vechime;
+                    document.getElementById('tip_locuinta').value = data.tip_locuinta;
+                    document.getElementById('ani_istoric_credit').value = data.ani_istoric_credit;
+                    document.getElementById('istoric_neplata').value = data.istoric_neplata;
+                }
+            } catch (err) {
+                console.error("Eroare la încărcarea profilului:", err);
+            }
+        }
+
+        async function saveProfile() {
+            const profileData = {
+                username: document.getElementById('username').value,
+                varsta: document.getElementById('varsta').value,
+                gen: document.getElementById('gen').value,
+                educatie: document.getElementById('educatie').value,
+                vechime: document.getElementById('vechime').value,
+                tip_locuinta: document.getElementById('tip_locuinta').value,
+                ani_istoric_credit: document.getElementById('ani_istoric_credit').value,
+                istoric_neplata: document.getElementById('istoric_neplata').value
+            };
+
+            try {
+                const res = await fetch(`${API_URL}/update-profile`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-access-token': token
+                    },
+                    body: JSON.stringify(profileData)
+                });
+
+                if (res.ok) {
+                    alert("✅ Profilul a fost actualizat!");
+                } else {
+                    alert("❌ Eroare la salvare.");
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function logout() {
+            sessionStorage.removeItem('token');
+            window.location.href = '/auth';
+        }
+
+        window.onload = loadProfile;
+    </script>
+</body>
+</html>

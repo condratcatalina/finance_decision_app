@@ -1,0 +1,43 @@
+# --- Aplicație web (Flask + producție Render) ---
+flask
+flask-bcrypt
+flask-cors
+gunicorn
+werkzeug
+
+# --- Configurare, securitate, autentificare ---
+python-dotenv
+PyJWT
+bcrypt
+
+# --- Bază de date (MongoDB Atlas — URI mongodb+srv) ---
+pymongo
+dnspython
+
+# --- API-uri externe, OAuth, scraping ---
+groq
+requests
+urllib3
+beautifulsoup4
+lxml
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+
+# --- Date, machine learning, modele .pkl ---
+pandas
+numpy
+scikit-learn
+joblib
+scipy
+
+# --- Antrenare modele, grafice, explorare date ---
+matplotlib
+seaborn
+streamlit
+
+# --- Utilitare frecvent folosite cu pandas / export ---
+openpyxl
+python-dateutil
+pytz
+tzdata

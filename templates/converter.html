@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinSight - Convertor Extras</title>
+    <script>
+        if (!sessionStorage.getItem('token')) {
+            window.location.href = "/auth";
+        }
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <div class="flex h-screen overflow-hidden">
+        <aside class="w-64 bg-indigo-900 text-white flex-shrink-0 flex flex-col">
+            <div class="p-6 text-2xl font-bold border-b border-indigo-800">
+                Fin<span class="text-indigo-400">Sight</span>
+            </div>
+            <nav class="mt-6 flex-1">
+                <a href="/" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
+                    <i class="fas fa-chart-pie mr-3"></i> Dashboard
+                </a>
+                <a href="/forecast" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
+                    <i class="fas fa-chart-line mr-3"></i> Prognoză Cheltuieli
+                </a>
+                <a href="/transactions" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
+                    <i class="fas fa-table mr-3"></i> Tranzacții
+                </a>
+                <a href="/converter" class="block py-3 px-6 bg-indigo-800 flex items-center border-l-4 border-indigo-400">
+                    <i class="fas fa-magic mr-3"></i> Convertor Extras
+                </a>
+                <a href="/simulator" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
+                    <i class="fas fa-calculator mr-3"></i> Simulator Credit
+                </a>
+                <a href="/profile" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
+                    <i class="fas fa-user-circle mr-3"></i> Profilul Meu
+                </a>
+            </nav>
+            <div class="p-4 border-t border-indigo-800">
+                <button onclick="logout()" class="w-full flex items-center py-3 px-6 text-red-400 hover:bg-red-900/30 transition rounded-lg">
+                    <i class="fas fa-sign-out-alt mr-3"></i> Deconectare
+                </button>
+            </div>
+        </aside>
+
+        <main class="flex-1 overflow-y-auto p-10">
+            <div class="max-w-4xl">
+                <h1 class="text-3xl font-bold text-gray-800 mb-2">Convertor Extras Bancar</h1>
+                <p class="text-gray-500 mb-10">Transformă extrasul tău ING (.csv) într-un tabel curat pe care îl poți importa apoi în pagina de Tranzacții.</p>
+
+                <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
+                    <div id="drop-zone" class="border-2 border-dashed border-indigo-200 rounded-2xl p-12 text-center hover:border-indigo-400 transition-all cursor-pointer bg-indigo-50/30">
+                        <i class="fas fa-file-csv text-6xl text-indigo-300 mb-4"></i>
+                        <h3 class="text-xl font-bold text-gray-700 mb-2">Încarcă Extrasul ING</h3>
+                        <p class="text-gray-500 mb-6">Trage fișierul aici sau apasă butonul de mai jos</p>
+
+                        <input type="file" id="fileInput" class="hidden" accept=".csv">
+                        <button onclick="document.getElementById('fileInput').click()" class="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-100">
+                            Selectează Fișierul
+                        </button>
+                        <p id="fileNameDisplay" class="mt-4 text-indigo-600 font-bold hidden"></p>
+                    </div>
+
+                    <div id="processArea" class="mt-8 hidden">
+                        <button onclick="convertFile()" id="btnConvert" class="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-lg hover:bg-green-700 shadow-xl shadow-green-100 transition-all flex justify-center items-center">
+                            <span id="btnText">Generează Tabel Curat (CSV)</span>
+                            <div id="loader" class="hidden ml-3 animate-spin"><i class="fas fa-circle-notch"></i></div>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-10 bg-blue-50 border border-blue-100 p-6 rounded-2xl flex items-start">
+                    <i class="fas fa-info-circle text-blue-500 mt-1 mr-4 text-xl"></i>
+                    <div class="text-blue-800 text-sm leading-relaxed">
+                        <strong>Cum funcționează?</strong> Acest utilitar extrage doar datele esențiale (Data, Suma și Detaliile) din fișierul ING, eliminând rândurile inutile și formatările greșite. După conversie, vei primi un fișier numit <code>extras_curatat.csv</code> pe care îl vei încărca în pagina de <strong>Tranzacții</strong>.
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+        const fileInput = document.getElementById('fileInput');
+
+        fileInput.onchange = function() {
+            if (this.files.length > 0) {
+                document.getElementById('fileNameDisplay').innerText = "Fișier selectat: " + this.files[0].name;
+                document.getElementById('fileNameDisplay').classList.remove('hidden');
+                document.getElementById('processArea').classList.remove('hidden');
+            }
+        };
+
+        async function convertFile() {
+            const btn = document.getElementById('btnConvert');
+            const loader = document.getElementById('loader');
+            const text = document.getElementById('btnText');
+            const token = sessionStorage.getItem('token');
+
+            if (!token) {
+                alert("Sesiune expirată! Loghează-te din nou.");
+                window.location.href = "/auth";
+                return;
+            }
+
+            btn.disabled = true;
+            loader.classList.remove('hidden');
+            text.innerText = "Se procesează...";
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const res = await fetch(`${API_URL}/api/convert-ing-csv`, {
+                    method: 'POST',
+                    headers: { 'x-access-token': token },
+                    body: formData
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    const blob = new Blob([data.csv], { type: 'text/csv' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = data.filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    alert("✅ Succes! Fișierul curățat a fost descărcat.");
+                } else {
+                    alert("Eroare: " + (data.error || "Eroare necunoscută"));
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Eroare de conexiune la server.");
+            } finally {
+                btn.disabled = false;
+                loader.classList.add('hidden');
+                text.innerText = "Generează Tabel Curat (CSV)";
+            }
+        }
+
+        // ... Restul scriptului rămâne neschimbat ...
+        function logout() {
+            sessionStorage.removeItem('token');
+            window.location.href = '/auth';
+        }
+    </script>
+</body>
+</html>

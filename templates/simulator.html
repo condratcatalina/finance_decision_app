@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinSight - Simulator Credit</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 font-sans">
+    <script>
+        // GARDA DE SECURITATE
+        if (!sessionStorage.getItem('token')) {
+            window.location.href = '/auth';
+        }
+    </script>
+
+    <div class="flex h-screen overflow-hidden">
+        <aside class="w-64 bg-indigo-900 text-white flex-shrink-0 flex flex-col">
+            <div class="p-6 text-2xl font-bold border-b border-indigo-800">
+                Fin<span class="text-indigo-400">Sight</span>
+            </div>
+            <nav class="mt-6 flex-1">
+                <a href="/" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
+                    <i class="fas fa-chart-pie mr-3"></i> Dashboard
+                </a>
+                <a href="/forecast" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
+                    <i class="fas fa-chart-line mr-3"></i> Prognoză Cheltuieli
+                </a>
+                <a href="/transactions" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
+                    <i class="fas fa-table mr-3"></i> Tranzacții
+                </a>
+                <a href="/converter" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
+                    <i class="fas fa-magic mr-3"></i> Convertor Extras
+                </a>
+                <a href="/simulator" class="block py-3 px-6 bg-indigo-800 flex items-center border-l-4 border-indigo-400">
+                    <i class="fas fa-calculator mr-3"></i> Simulator Credit
+                </a>
+                <a href="/profile" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
+                    <i class="fas fa-user-circle mr-3"></i> Profilul Meu
+                </a>
+            </nav>
+
+            <div class="p-4 border-t border-indigo-800">
+                <button onclick="logout()" class="w-full flex items-center py-3 px-6 text-red-400 hover:bg-red-900/30 hover:text-red-300 transition rounded-lg">
+                    <i class="fas fa-sign-out-alt mr-3"></i> Deconectare
+                </button>
+            </div>
+        </aside>
+
+        <main class="flex-1 overflow-y-auto p-10">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Simulator Credit Inteligent</h1>
+            <p class="text-gray-500 mb-8">Analiză bazată pe modelul Random Forest și istoricul tău financiar.</p>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+                <div class="lg:col-span-1 space-y-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <h2 class="text-lg font-bold mb-4 flex items-center">
+                            <i class="fas fa-edit text-indigo-600 mr-2"></i> Date Solicitare
+                        </h2>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-400 uppercase">Suma Solicitată (RON)</label>
+                                <input type="number" id="loanAmount" value="25000" class="w-full mt-1 p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-400">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-400 uppercase">Perioada (Ani)</label>
+                                <select id="loanYears" class="w-full mt-1 p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-400">
+                                    <option value="1">1 An</option>
+                                    <option value="3">3 Ani</option>
+                                    <option value="5" selected>5 Ani</option>
+                                    <option value="10">10 Ani</option>
+                                </select>
+                            </div>
+
+                            <hr>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-400 uppercase">Venit Anual (RON)</label>
+                                <div class="relative">
+                                    <input type="number" id="annualIncome" placeholder="Introdu venitul manual..." class="w-full mt-1 p-3 bg-indigo-50 border border-indigo-100 text-indigo-900 font-bold rounded-xl outline-none focus:ring-2 focus:ring-indigo-400">
+                                    <button onclick="fetchEstimatedIncome()" class="absolute right-2 top-2 text-indigo-600 hover:text-indigo-800 p-1" title="Recalculează din tranzacții">
+                                        <i class="fas fa-sync-alt"></i>
+                                    </button>
+                                </div>
+                                <p class="text-[10px] text-gray-400 mt-1">*Poți modifica manual valoarea pre-calculată.</p>
+                            </div>
+
+                            <button onclick="runSimulation()" id="btnSimulate" class="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 flex justify-center items-center">
+                                <span id="btnText">Verifică Eligibilitatea</span>
+                                <div id="btnLoader" class="hidden ml-3 animate-spin"><i class="fas fa-circle-notch"></i></div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2 space-y-6">
+                    <div id="resultCard" class="hidden bg-white p-8 rounded-2xl shadow-sm border border-gray-100 transition-all">
+                        <div class="flex items-center justify-between mb-6">
+                            <div>
+                                <span id="badgeStatus" class="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider">Aprobat</span>
+                                <h3 class="text-2xl font-bold mt-2">Rezultat Analiză</h3>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm text-gray-400">Scor Probabilitate</p>
+                                <p id="probText" class="text-3xl font-black text-indigo-600">--%</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-50 p-4 rounded-xl mb-6 border-l-4 border-indigo-500">
+                            <p class="text-xs font-bold text-indigo-500 uppercase mb-1"><i class="fas fa-robot mr-1"></i> Opinie FinanceAI:</p>
+                            <div id="aiAdvice" class="text-gray-700 italic">"Se încarcă explicația..."</div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="p-4 bg-gray-50 rounded-xl">
+                                <p class="text-[10px] font-bold text-gray-400 uppercase">Rată Lunară</p>
+                                <p id="monthlyInstallment" class="text-lg font-bold">0 RON</p>
+                            </div>
+                            <div class="p-4 bg-gray-50 rounded-xl">
+                                <p class="text-[10px] font-bold text-gray-400 uppercase">Grad Îndatorare (DTI)</p>
+                                <p id="dtiRatio" class="text-lg font-bold">0%</p>
+                            </div>
+                            <div class="p-4 bg-gray-50 rounded-xl">
+                                <p class="text-[10px] font-bold text-gray-400 uppercase">Dobândă Estimată</p>
+                                <p id="interestRate" class="text-lg font-bold">Variază</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="scheduleCard" class="hidden bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="p-6 border-b">
+                            <h3 class="font-bold text-gray-800">Scadențar Estimativ (Primele 12 luni)</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead class="bg-gray-50 text-xs font-bold text-gray-400 uppercase">
+                                    <tr>
+                                        <th class="px-6 py-3">Lună</th>
+                                        <th class="px-6 py-3">Dată Plată</th>
+                                        <th class="px-6 py-3">Principal</th>
+                                        <th class="px-6 py-3">Dobândă</th>
+                                        <th class="px-6 py-3">Sold Rămas</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="scheduleBody" class="text-sm"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+        const token = sessionStorage.getItem('token');
+
+        window.onload = fetchEstimatedIncome;
+
+        function logout() {
+            sessionStorage.removeItem('token');
+            window.location.href = '/auth';
+        }
+
+        async function fetchEstimatedIncome() {
+            try {
+                const res = await fetch(`${API_URL}/api/get-estimated-income`, {
+                    method: 'GET',
+                    headers: { 'x-access-token': token }
+                });
+                const data = await res.json();
+
+                if (data.venit_anual_ron && data.venit_anual_ron > 0) {
+                    document.getElementById('annualIncome').value = Math.round(data.venit_anual_ron);
+                } else {
+                    document.getElementById('annualIncome').placeholder = "Introdu venitul manual...";
+                }
+            } catch (err) {
+                console.log("Info: Nu s-a putut pre-calcula venitul automat.");
+            }
+        }
+
+        async function runSimulation() {
+            const btn = document.getElementById('btnSimulate');
+            const loader = document.getElementById('btnLoader');
+            const text = document.getElementById('btnText');
+
+            const suma = document.getElementById('loanAmount').value;
+            const ani = document.getElementById('loanYears').value;
+            const venitManual = document.getElementById('annualIncome').value;
+
+            if (!venitManual || venitManual <= 0) {
+                alert("Te rugăm să introduci un venit anual valid.");
+                return;
+            }
+
+            btn.disabled = true;
+            loader.classList.remove('hidden');
+            text.innerText = "Analizăm datele...";
+
+            try {
+                const response = await fetch(`${API_URL}/predict-credit`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-access-token': token },
+                    body: JSON.stringify({
+                        suma_credit: suma,
+                        perioada_ani: ani,
+                        venit_anual_manual: venitManual
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    displayResults(result);
+                } else {
+                    alert("Eroare: " + (result.error || "Eroare la simulare"));
+                }
+            } catch (err) {
+                alert("Eroare de conexiune cu serverul.");
+            } finally {
+                btn.disabled = false;
+                loader.classList.add('hidden');
+                text.innerText = "Verifică Eligibilitatea";
+            }
+        }
+
+        function displayResults(data) {
+            document.getElementById('resultCard').classList.remove('hidden');
+
+            const badge = document.getElementById('badgeStatus');
+            badge.innerText = data.status_credit;
+            badge.className = data.status_credit === "APROBAT"
+                ? "px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-green-100 text-green-700"
+                : "px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-red-100 text-red-700";
+
+            document.getElementById('probText').innerText = data.probabilitate;
+            document.getElementById('aiAdvice').innerText = data.explicatie_ai || "Analiza AI nu a putut fi generată momentan.";
+
+            if (data.scadentar && data.scadentar.length > 0) {
+                document.getElementById('scheduleCard').classList.remove('hidden');
+                document.getElementById('monthlyInstallment').innerText = data.scadentar[0].rata_totala.toFixed(2) + " RON";
+                document.getElementById('interestRate').innerText = data.dobanda_aplicata;
+
+                const rata = data.scadentar[0].rata_totala;
+                const venitLunar = data.venit_anual_ron / 12;
+                const dti = (rata / venitLunar) * 100;
+                document.getElementById('dtiRatio').innerText = Math.round(dti) + "%";
+
+                const body = document.getElementById('scheduleBody');
+                body.innerHTML = '';
+                data.scadentar.forEach(item => {
+                    body.innerHTML += `
+                        <tr class="border-b hover:bg-gray-50 transition">
+                            <td class="px-6 py-4 font-medium">${item.luna}</td>
+                            <td class="px-6 py-4 text-gray-500">${item.data_plata}</td>
+                            <td class="px-6 py-4 text-gray-800 font-bold">${item.principal.toFixed(2)} RON</td>
+                            <td class="px-6 py-4 text-red-500">${item.dobanda.toFixed(2)} RON</td>
+                            <td class="px-6 py-4 text-gray-400">${item.sold_ramas.toFixed(2)} RON</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                document.getElementById('scheduleCard').classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinSight - Dashboard</title>
+
+    <script>
+        if (!sessionStorage.getItem('token')) {
+            window.location.href = "/auth";
+        }
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <div class="flex h-screen overflow-hidden">
+        <aside class="w-64 bg-indigo-900 text-white flex-shrink-0 flex flex-col">
+            <div class="p-6 text-2xl font-bold border-b border-indigo-800">
+                Fin<span class="text-indigo-400">Sight</span>
+            </div>
+
+            <nav class="mt-6 flex-1">
+                <a href="/" class="block py-3 px-6 bg-indigo-800 flex items-center border-l-4 border-indigo-400">
+                    <i class="fas fa-chart-pie mr-3"></i> Dashboard
+                </a>
+                <a href="/forecast" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
+                    <i class="fas fa-chart-line mr-3"></i> Prognoză Cheltuieli
+                </a>
+                <a href="/transactions" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
+                    <i class="fas fa-table mr-3"></i> Tranzacții
+                </a>
+                <a href="/converter" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
+                    <i class="fas fa-magic mr-3"></i> Convertor Extras
+                </a>
+                <a href="/simulator" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
+                    <i class="fas fa-calculator mr-3"></i> Simulator Credit
+                </a>
+                <a href="/profile" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
+                    <i class="fas fa-user-circle mr-3"></i> Profilul Meu
+                </a>
+            </nav>
+
+            <div class="p-4 border-t border-indigo-800">
+                <button onclick="logout()" class="w-full flex items-center py-3 px-6 text-red-400 hover:bg-red-900/30 hover:text-red-300 transition rounded-lg">
+                    <i class="fas fa-sign-out-alt mr-3"></i> Deconectare
+                </button>
+            </div>
+        </aside>
+
+        <main class="flex-1 overflow-y-auto p-8">
+            <div class="flex flex-wrap gap-4 mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100 items-center">
+                <div class="flex items-center gap-2">
+                    <label class="text-sm font-bold text-gray-400 uppercase">Luna:</label>
+                    <select id="filter-month" onchange="updateDashboard()" class="border p-2 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                        <option value="ianuarie">Ianuarie</option>
+                        <option value="februarie">Februarie</option>
+                        <option value="martie">Martie</option>
+                        <option value="aprilie">Aprilie</option>
+                        <option value="mai">Mai</option>
+                        <option value="iunie">Iunie</option>
+                        <option value="iulie">Iulie</option>
+                        <option value="august">August</option>
+                        <option value="septembrie">Septembrie</option>
+                        <option value="octombrie">Octombrie</option>
+                        <option value="noiembrie">Noiembrie</option>
+                        <option value="decembrie">Decembrie</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="text-sm font-bold text-gray-400 uppercase">An:</label>
+                    <select id="filter-year" onchange="updateDashboard()" class="border p-2 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                        <option value="2026">2026</option>
+                    </select>
+                </div>
+            </div>
+
+            <h1 class="text-3xl font-bold text-gray-800 mb-8">Insight-urile tale financiare</h1>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-3">
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
+                    <p class="text-xs font-bold text-gray-400 uppercase">Venit Total</p>
+                    <h2 id="total-venit" class="text-2xl font-bold text-gray-800">0.00 RON</h2>
+                    <p id="label-venit-period" class="text-[10px] text-gray-400 mt-1">Încărcare...</p>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500">
+                    <p class="text-xs font-bold text-gray-400 uppercase">Cheltuieli Totale</p>
+                    <h2 id="total-cheltuieli" class="text-2xl font-bold text-gray-800">0.00 RON</h2>
+                    <p id="label-cheltuieli-period" class="text-[10px] text-gray-400 mt-1">Încărcare...</p>
+                </div>
+
+                <div id="persona-card" class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-gray-300 transition-all duration-500">
+                    <p class="text-xs font-bold text-gray-400 uppercase">Profil Financiar</p>
+                    <h2 id="persona-name" class="text-xl font-bold text-gray-600">...</h2>
+                    <p class="text-[10px] text-gray-400 mt-1">Calculat prin algoritmul K-Means</p>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-8 flex items-center gap-3">
+                <div class="p-2 bg-indigo-50 rounded-lg text-indigo-600">
+                    <i class="fas fa-heartbeat text-lg"></i>
+                </div>
+                <div class="text-sm">
+                    <span class="font-bold text-gray-500 uppercase text-xs tracking-wider">Indicator Sănătate Financiară:</span>
+                    <span id="savings-rate-text" class="ml-1 font-medium text-gray-700">Se analizează soldul...</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-xl shadow-sm min-h-[520px] flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold mb-4">Distribuție Cheltuieli</h3>
+                        <div id="chart-container" class="h-64">
+                            <canvas id="expenseChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 pt-4 border-t border-gray-100">
+                        <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center">
+                            <i class="fas fa-store mr-2 text-indigo-500"></i> Repartizare Consum (Top 3 Comercianți)
+                        </h4>
+                        <div id="top-merchants-container" class="space-y-2">
+                            </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-indigo-100 bg-indigo-50 flex flex-col">
+                    <h3 class="text-indigo-800 font-bold flex items-center mb-4">
+                        <i class="fas fa-robot mr-2"></i> Sinteză consultativă automatizată
+                    </h3>
+                    <div class="flex-1 flex flex-col justify-center">
+                        <p id="ai-advice" class="text-gray-700 italic leading-relaxed text-lg">
+                            "Analizăm datele tale..."
+                        </p>
+                    </div>
+                    <div class="mt-4 text-xs text-indigo-400 font-bold">
+                        Sursă: K-Means Clustering
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+        const token = sessionStorage.getItem('token');
+        let chartInstance = null;
+
+        function logout() {
+            sessionStorage.removeItem('token');
+            window.location.href = "/auth";
+        }
+
+        // --- MICRO-INTERACȚIUNE: ANIMATIE COUNTUP EFECT ---
+        function animateValue(id, target) {
+            let startTimestamp = null;
+            const duration = 450; // Timp execuție animație (milisecunde)
+
+            function step(timestamp) {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                const currentValue = progress * target;
+                document.getElementById(id).innerText = currentValue.toFixed(2) + " RON";
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                }
+            }
+            window.requestAnimationFrame(step);
+        }
+
+        async function updateDashboard() {
+            const m = document.getElementById('filter-month').value;
+            const y = document.getElementById('filter-year').value;
+            await initDashboard(m, y);
+        }
+
+        async function initDashboard(month = "", year = "") {
+            if (!token) return;
+
+            let url = `${API_URL}/dashboard-stats?month=${month}&year=${year}`;
+
+            try {
+                const resStats = await fetch(url, { headers: { 'x-access-token': token } });
+
+                if (resStats.ok) {
+                    const data = await resStats.json();
+
+                    document.getElementById('filter-month').value = data.selected_month;
+                    document.getElementById('filter-year').value = data.selected_year;
+
+                    // Lansăm efectul de numărare asincronă pentru carduri
+                    animateValue('total-venit', data.total_venit);
+                    animateValue('total-cheltuieli', data.total_cheltuieli);
+
+                    const rateTextEl = document.getElementById('savings-rate-text');
+                    const rEcon = data.rata_economisire;
+
+                    if (data.total_venit === 0 && data.total_cheltuieli === 0) {
+                        rateTextEl.innerHTML = "<span class='text-gray-400 italic'>Nu există tranzacții înregistrate în această lună.</span>";
+                    } else if (rEcon > 0) {
+                        rateTextEl.innerHTML = `Economisești <strong class="text-green-600 font-bold">${rEcon}%</strong> din veniturile lunare. (Recomandat: minim 20%)`;
+                    } else {
+                        rateTextEl.innerHTML = `Deficit bugetar de <strong class="text-red-500 font-bold">${Math.abs(rEcon)}%</strong>. Cheltuielile au depășit încasările din această lună.`;
+                    }
+
+                    // AFISARE COMERCIANTI CURATATI (FARA TRANSFERURI)
+                    const merchantsContainer = document.getElementById('top-merchants-container');
+                    merchantsContainer.innerHTML = '';
+
+                    if (data.top_comercianti && data.top_comercianti.length > 0) {
+                        data.top_comercianti.forEach((item, index) => {
+                            merchantsContainer.innerHTML += `
+                                <div class="flex justify-between items-center bg-gray-50 p-2.5 rounded-lg text-sm border border-gray-100">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-5 h-5 flex items-center justify-center bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold">${index + 1}</span>
+                                        <span class="font-semibold text-gray-700">${item.nume}</span>
+                                    </div>
+                                    <span class="font-bold text-red-500">-${item.suma.toFixed(2)} RON</span>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        merchantsContainer.innerHTML = `<div class="text-xs text-gray-400 italic">Nu există tranzacții comerciale pur de consum în această perioadă.</div>`;
+                    }
+
+                    const periodText = `Luna: ${data.selected_month}, An: ${data.selected_year}`;
+                    document.getElementById('label-venit-period').innerText = periodText;
+                    document.getElementById('label-cheltuieli-period').innerText = periodText;
+
+                    const container = document.getElementById('chart-container');
+                    if (data.pie_chart && data.pie_chart.values.length > 0) {
+                        container.innerHTML = '<canvas id="expenseChart"></canvas>';
+                        renderPieChart(data.pie_chart);
+                    } else {
+                        container.innerHTML = '<div class="flex items-center justify-center h-full text-gray-400 italic">Nicio tranzacție în această perioadă.</div>';
+                    }
+                }
+
+                const resPersona = await fetch(`${API_URL}/financial-persona`, { headers: { 'x-access-token': token } });
+                if (resPersona.ok) {
+                    const persona = await resPersona.json();
+
+                    const nameEl = document.getElementById('persona-name');
+                    const cardEl = document.getElementById('persona-card');
+
+                    nameEl.innerText = persona.nume;
+                    document.getElementById('ai-advice').innerText = `"${persona.desc}"`;
+
+                    cardEl.className = "bg-white p-6 rounded-xl shadow-sm border-l-4 transition-all duration-500";
+                    nameEl.className = "text-xl font-bold transition-all duration-500";
+
+                    if (persona.cluster_id === 0) {
+                        cardEl.classList.add('border-green-500');
+                        nameEl.classList.add('text-green-600');
+                    } else if (persona.cluster_id === 1) {
+                        cardEl.classList.add('border-indigo-500');
+                        nameEl.classList.add('text-indigo-600');
+                    } else if (persona.cluster_id === 2) {
+                        cardEl.classList.add('border-orange-500');
+                        nameEl.classList.add('text-orange-500');
+                    } else if (persona.cluster_id === 3) {
+                        cardEl.classList.add('border-red-500');
+                        nameEl.classList.add('text-red-600');
+                    }
+                }
+            } catch (err) {
+                console.error("Dashboard error:", err);
+            }
+        }
+
+        function renderPieChart(chartData) {
+            const ctx = document.getElementById('expenseChart').getContext('2d');
+            if(chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [{
+                        data: chartData.values,
+                        backgroundColor: ['#4F46E5', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4'],
+                        borderWidth: 0,
+                        hoverOffset: 20
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { padding: 15, usePointStyle: true } } },
+                    cutout: '70%'
+                }
+            });
+        }
+
+        window.onload = () => initDashboard();
+    </script>
+</body>
+</html>

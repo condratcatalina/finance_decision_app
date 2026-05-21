@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <title>FinSight - Management Tranzacții</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 font-sans">
+    <script>if (!sessionStorage.getItem('token')) window.location.href = '/auth';</script>
+
+    <div class="flex h-screen overflow-hidden">
+        <aside class="w-64 bg-indigo-900 text-white flex-shrink-0 flex flex-col">
+            <div class="p-6 text-2xl font-bold border-b border-indigo-800">Fin<span class="text-indigo-400">Sight</span></div>
+            <nav class="mt-6 flex-1">
+                <a href="/" class="block py-3 px-6 hover:bg-indigo-800 flex items-center"><i class="fas fa-chart-pie mr-3"></i> Dashboard</a>
+                <a href="/forecast" class="block py-3 px-6 hover:bg-indigo-800 flex items-center"><i class="fas fa-chart-line mr-3"></i> Prognoză Cheltuieli</a>
+                <a href="/transactions" class="block py-3 px-6 bg-indigo-800 flex items-center border-l-4 border-indigo-400"><i class="fas fa-table mr-3"></i> Tranzacții</a>
+                <a href="/converter" class="block py-3 px-6 hover:bg-indigo-800 flex items-center"><i class="fas fa-magic mr-3"></i> Convertor Extras</a>
+                <a href="/simulator" class="block py-3 px-6 hover:bg-indigo-800 flex items-center"><i class="fas fa-calculator mr-3"></i> Simulator Credit</a>
+                <a href="/profile" class="block py-3 px-6 hover:bg-indigo-800 flex items-center"><i class="fas fa-user-circle mr-3"></i> Profilul Meu</a>
+            </nav>
+            <div class="p-4 border-t border-indigo-800">
+                <button onclick="logout()" class="w-full flex items-center py-3 px-6 text-red-400 hover:bg-red-900/30 transition rounded-lg"><i class="fas fa-sign-out-alt mr-3"></i> Deconectare</button>
+            </div>
+        </aside>
+
+        <main class="flex-1 p-8 overflow-y-auto">
+            <div class="flex justify-between items-center mb-8">
+                <h1 class="text-3xl font-bold">Management Tranzacții</h1>
+                <div class="flex space-x-4">
+                    <button onclick="openImportGuidance()" class="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 transition flex items-center">
+                        <i class="fas fa-file-upload mr-2"></i> Încarcă Tranzacții
+                    </button>
+                    <button onclick="openManualModal()" class="bg-green-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-green-700 transition"><i class="fas fa-plus mr-2"></i> Adaugă Manual</button>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-4 mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100 items-center">
+                <div class="flex items-center gap-2">
+                    <label class="text-sm font-bold text-gray-400 uppercase">Luna:</label>
+                    <select id="filter-month" onchange="loadTransactions()" class="border p-2 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                        <option value="">Toate</option>
+                        <option value="ianuarie">Ianuarie</option>
+                        <option value="februarie">Februarie</option>
+                        <option value="martie">Martie</option>
+                        <option value="aprilie">Aprilie</option>
+                        <option value="mai">Mai</option>
+                        <option value="iunie">Iunie</option>
+                        <option value="iulie">Iulie</option>
+                        <option value="august">August</option>
+                        <option value="septembrie">Septembrie</option>
+                        <option value="octombrie">Octombrie</option>
+                        <option value="noiembrie">Noiembrie</option>
+                        <option value="decembrie">Decembrie</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="text-sm font-bold text-gray-400 uppercase">An:</label>
+                    <select id="filter-year" onchange="loadTransactions()" class="border p-2 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                        <option value="">Toți</option>
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                        <option value="2026">2026</option>
+                    </select>
+                </div>
+                <button onclick="resetTransactionFilters()" class="text-indigo-600 text-xs font-bold hover:underline ml-auto">
+                    Resetează Filtre
+                </button>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50 border-b">
+                        <tr>
+                            <th class="px-6 py-4">Dată</th>
+                            <th class="px-6 py-4">Detalii Tranzacție (Full Context)</th>
+                            <th class="px-6 py-4">Sumă</th>
+                            <th class="px-6 py-4">Categorie</th>
+                            <th class="px-6 py-4 text-center">Acțiuni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionBody"></tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <div id="importGuidanceModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-lg">
+            <div class="text-center mb-6">
+                <div class="bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-file-csv text-2xl text-indigo-600"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800">Cum arată fișierul tău?</h2>
+            </div>
+
+            <div class="space-y-6">
+                <div class="border-2 border-green-100 bg-green-50/50 p-4 rounded-2xl">
+                    <p class="text-xs font-bold text-green-600 uppercase mb-2">Format Curățat (Data | Suma | Detalii)</p>
+                    <p class="text-sm text-gray-600 mb-4">Folosește această opțiune dacă ai trecut deja fișierul prin <strong>Convertor</strong>.</p>
+                    <label class="block w-full bg-green-600 text-white text-center py-3 rounded-xl font-bold cursor-pointer hover:bg-green-700 transition">
+                        Importă Fișier Curățat
+                        <input type="file" id="standardFileInput" class="hidden" onchange="importStandardFile()">
+                    </label>
+                </div>
+
+                <div class="border-2 border-blue-100 bg-blue-50/50 p-4 rounded-2xl">
+                    <p class="text-xs font-bold text-blue-600 uppercase mb-2">Extras Brut / Haotic (ING)</p>
+                    <p class="text-sm text-gray-600 mb-4">Dacă ai descărcat extrasul direct din bancă și nu l-ai procesat încă.</p>
+                    <div class="flex flex-col space-y-2">
+                        <a href="/converter" class="block w-full bg-blue-600 text-white text-center py-3 rounded-xl font-bold hover:bg-blue-700 transition">
+                            Mergi la Convertor <i class="fas fa-arrow-right ml-1"></i>
+                        </a>
+                        <label class="text-center text-xs text-blue-500 hover:underline cursor-pointer">
+                            Prefer să mapesc manual coloanele (Legacy)
+                            <input type="file" id="fileInput" class="hidden" onchange="previewCsvFile()">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="closeImportGuidance()" class="w-full mt-6 text-gray-400 text-sm font-medium hover:text-gray-600">Închide</button>
+        </div>
+    </div>
+
+    <div id="mappingModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-xl">
+            <h2 class="text-2xl font-bold mb-4">Configurare Coloane Extras</h2>
+            <div class="space-y-4 mb-8" id="mappingSelectors">
+                <div class="flex justify-between items-center"><span>Coloana Dată:</span> <select id="map-data" class="border p-2 rounded w-2/3 bg-gray-50"></select></div>
+                <div class="flex justify-between items-center"><span>Coloana Detalii/Tip:</span> <select id="map-detalii" class="border p-2 rounded w-2/3 bg-gray-50"></select></div>
+                <div class="flex justify-between items-center"><span>Debit (Suma -):</span> <select id="map-debit" class="border p-2 rounded w-2/3 bg-gray-50"></select></div>
+                <div class="flex justify-between items-center"><span>Credit (Suma +):</span> <select id="map-credit" class="border p-2 rounded w-2/3 bg-gray-50"></select></div>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button onclick="document.getElementById('mappingModal').classList.add('hidden')" class="text-gray-400 px-4">Anulează</button>
+                <button onclick="confirmImport()" id="btnConfirmImport" class="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700">Importă și Clasifică cu AI</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="manualModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Adaugă Tranzacție</h2>
+            <div class="space-y-4">
+                <input type="text" id="m-data" placeholder="ex: 31 ianuarie 2026" class="w-full p-3 border rounded-xl outline-none">
+                <input type="text" id="m-detalii" placeholder="Detalii tranzactie..." class="w-full p-3 border rounded-xl outline-none">
+                <input type="number" id="m-suma" placeholder="Sumă (negativ pt cheltuială)" class="w-full p-3 border rounded-xl outline-none">
+                <select id="m-categorie" class="w-full p-3 border rounded-xl outline-none">
+                    <option value="Altele">Selectează Categoria</option>
+                    <option value="Salariu">Salariu</option>
+                    <option value="Mâncare">Mâncare</option>
+                    <option value="Iesiri">Iesiri</option>
+                    <option value="Shopping">Shopping</option>
+                    <option value="Utilități">Utilități</option>
+                </select>
+            </div>
+            <div class="flex space-x-3 mt-8">
+                <button onclick="closeManualModal()" class="flex-1 py-3 text-gray-400 font-bold">Anulează</button>
+                <button onclick="saveManual()" class="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700">Salvează</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+        const token = sessionStorage.getItem('token');
+        let rawCsvRows = [];
+
+        function openImportGuidance() { document.getElementById('importGuidanceModal').classList.remove('hidden'); }
+        function closeImportGuidance() { document.getElementById('importGuidanceModal').classList.add('hidden'); }
+
+        async function importStandardFile() {
+            const fileInput = document.getElementById('standardFileInput');
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            closeImportGuidance();
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const btn = document.querySelector('button[onclick="openImportGuidance()"]');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fas fa-circle-notch animate-spin mr-2"></i> Se clasifică...`;
+
+            try {
+                const res = await fetch(`${API_URL}/api/import-standard-csv`, {
+                    method: 'POST',
+                    headers: { 'x-access-token': token },
+                    body: formData
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert("Eroare: " + data.error);
+                }
+            } catch (err) {
+                alert("Eroare de conexiune.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        async function loadTransactions() {
+            const month = document.getElementById('filter-month').value;
+            const year = document.getElementById('filter-year').value;
+
+            let url = `${API_URL}/get-transactions?`;
+            if (month) url += `month=${month}&`;
+            if (year) url += `year=${year}`;
+
+            const res = await fetch(url, { headers: { 'x-access-token': token } });
+            const data = await res.json();
+            const body = document.getElementById('transactionBody');
+            body.innerHTML = '';
+
+            if (data.length === 0) {
+                body.innerHTML = '<tr><td colspan="5" class="px-6 py-10 text-center text-gray-400 italic">Nicio tranzacție găsită pentru această perioadă.</td></tr>';
+                return;
+            }
+
+            data.forEach(t => {
+                body.innerHTML += `<tr class="border-b text-sm"><td class="px-6 py-4">${t.data}</td><td class="px-6 py-4 font-medium">${t.detalii}</td><td class="px-6 py-4 font-bold ${t.suma > 0 ? 'text-green-600' : 'text-red-600'}">${t.suma.toFixed(2)} RON</td><td class="px-6 py-4"><span class="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-bold">${t.categorie}</span></td><td class="px-6 py-4 text-center"><button onclick="deleteT('${t.id}')" class="text-gray-300 hover:text-red-600"><i class="fas fa-trash-alt"></i></button></td></tr>`;
+            });
+        }
+
+        function resetTransactionFilters() {
+            document.getElementById('filter-month').value = "";
+            document.getElementById('filter-year').value = "";
+            loadTransactions();
+        }
+
+        function openManualModal() { document.getElementById('manualModal').classList.remove('hidden'); }
+        function closeManualModal() { document.getElementById('manualModal').classList.add('hidden'); }
+
+        async function saveManual() {
+            const data = {
+                data: document.getElementById('m-data').value,
+                detalii: document.getElementById('m-detalii').value,
+                suma: document.getElementById('m-suma').value,
+                categorie: document.getElementById('m-categorie').value
+            };
+            const res = await fetch(`${API_URL}/add-manual-transaction`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-access-token': token },
+                body: JSON.stringify(data)
+            });
+            if (res.ok) location.reload();
+        }
+
+        async function previewCsvFile() {
+            closeImportGuidance();
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const res = await fetch(`${API_URL}/preview-csv`, {
+                    method: 'POST',
+                    headers: { 'x-access-token': token },
+                    body: formData
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+                rawCsvRows = data.preview_rows;
+                const luni = ["ianuarie", "februarie", "martie", "aprilie", "mai", "iunie", "iulie", "august", "septembrie", "octombrie", "noiembrie", "decembrie"];
+                let representativeRow = rawCsvRows.find(row => {
+                    let cell0 = row[0] ? row[0].toLowerCase() : "";
+                    return luni.some(l => cell0.includes(l)) && /\d+/.test(cell0);
+                }) || rawCsvRows[0];
+                const selectors = ['map-data', 'map-detalii', 'map-debit', 'map-credit'];
+                const defaultMapping = { 'map-data': 0, 'map-detalii': 3, 'map-debit': 5, 'map-credit': 6 };
+                selectors.forEach(id => {
+                    const s = document.getElementById(id);
+                    s.innerHTML = '';
+                    representativeRow.forEach((cell, i) => {
+                        let exampleText = cell || "gol";
+                        if (exampleText.length > 30) exampleText = exampleText.substring(0, 27) + "...";
+                        const option = document.createElement('option');
+                        option.value = i;
+                        option.text = `Coloana ${i} (${exampleText})`;
+                        if (i === defaultMapping[id]) option.selected = true;
+                        s.appendChild(option);
+                    });
+                });
+                document.getElementById('mappingModal').classList.remove('hidden');
+            } catch (err) {
+                alert("Eroare la citirea fișierului: " + err.message);
+            }
+        }
+
+        async function confirmImport() {
+            const btn = document.getElementById('btnConfirmImport');
+            btn.innerText = "Se procesează..."; btn.disabled = true;
+            const mapping = {
+                data: document.getElementById('map-data').value,
+                detalii: document.getElementById('map-detalii').value,
+                suma_debit: document.getElementById('map-debit').value,
+                suma_credit: document.getElementById('map-credit').value
+            };
+            await fetch(`${API_URL}/import-with-mapping`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-access-token': token },
+                body: JSON.stringify({ mapping, rows: rawCsvRows })
+            });
+            location.reload();
+        }
+
+        async function deleteT(id) { if(confirm("Ștergi tranzacția?")) { await fetch(`${API_URL}/delete-transaction/${id}`, { method: 'DELETE', headers: { 'x-access-token': token } }); loadTransactions(); } }
+        function logout() { sessionStorage.removeItem('token'); window.location.href = '/auth'; }
+        window.onload = loadTransactions;
+    </script>
+</body>
+</html>
