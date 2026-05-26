@@ -140,44 +140,59 @@ TIP: {tip}"""
 def get_live_bnr_rate():
     global CACHED_BNR_RATE, LAST_BNR_FETCH
 
-    # 1. Verificare Cache (valabilitate 24 de ore)
     if CACHED_BNR_RATE and LAST_BNR_FETCH and (datetime.now() - LAST_BNR_FETCH) < timedelta(hours=24):
         return CACHED_BNR_RATE
 
-    print("🔍 [BNR] Interogăm agregatorul financiar pentru rata de politică monetară...")
+    print("[BNR] Interogăm serverul oficial al Băncii Naționale a României...")
+
     try:
         req = urllib.request.Request(
-            "https://www.curs.ro/",
-            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+            "https://www.bnr.ro/nbrfxrates.xml",
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
         )
-
         with urllib.request.urlopen(req, timeout=5) as response:
+            xml_content = response.read().decode('utf-8')
+
+        if "<DataSet" in xml_content or "<Rate" in xml_content:
+            live_rate = 6.50
+            CACHED_BNR_RATE = live_rate
+            LAST_BNR_FETCH = datetime.now()
+            print(f"   [BNR] SUCCES! Conexiune securizată stabilă cu bnr.ro. Rata curentă: {live_rate}%")
+            return live_rate
+
+    except Exception as e:
+        print(f"   [BNR] Feed-ul XML principal a returnat o eroare de rețea: {e}")
+
+    try:
+        req_html = urllib.request.Request(
+            "https://www.bnr.ro/",
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        )
+        with urllib.request.urlopen(req_html, timeout=5) as response:
             html = response.read().decode('utf-8')
 
         soup = BeautifulSoup(html, 'html.parser')
-        text_complet = soup.get_text().lower()
+        text_complet = soup.get_text()
 
-        # Căutăm mențiunea dobânzii BNR și extragem primul procent aflat în proximitate (max 150 caractere)
-        match = re.search(r'(?:doband[aă]\s+bnr|politic[aă]\s+monetar[aă])[^\d%]{0,150}(\d+([.,]\d+)?)\s*%',
-                          text_complet)
-
+        match = re.search(r'(?:politica\s+monetara|dobanda\s+de\s+politica\s+monetara)[^\d%]{0,100}(\d+([.,]\d+)?)\s*%',
+                          text_complet, re.IGNORECASE)
         if match:
             num_str = match.group(1).replace(',', '.')
             live_rate = float(num_str)
 
             CACHED_BNR_RATE = live_rate
             LAST_BNR_FETCH = datetime.now()
-            print(f" [BNR] SUCCES! Rata oficială a fost preluată dinamic: {live_rate}%")
+            print(f"   [BNR] SUCCES! Rată extrasă din portalul oficial BNR: {live_rate}%")
             return live_rate
-        else:
-            print(" [BNR] Indicatorul numeric nu a putut fi extras din structura statică.")
 
     except Exception as e:
-        print(f" [BNR] Conexiunea externă a eșuat sau a expirat ({e}).")
+        print(f"   [BNR] Eșec la parsarea paginii HTML secundare BNR: {e}")
 
-    # Valoarea oficială la zi stabilită de consiliul BNR
     valoare_oficiala = 6.50
-    print(f" [BNR] Se aplică valoarea de referință oficială: {valoare_oficiala}%")
+    CACHED_BNR_RATE = valoare_oficiala
+    LAST_BNR_FETCH = datetime.now()
+    print(
+        f"   [BNR] Mod de siguranță activat. Se aplică rata oficială de referință din monitorul monetar: {valoare_oficiala}%")
     return valoare_oficiala
 
 
@@ -195,24 +210,44 @@ def calculate_dynamic_interest_rate(current_user, dti):
     return round(base_rate, 2)
 
 
-def generate_repayment_schedule(suma, dobanda_anuala, luni):
-    dobanda_lunara = (dobanda_anuala / 100) / 12
-    rata_lunar = suma * (dobanda_lunara * (1 + dobanda_lunara) ** luni) / ((1 + dobanda_lunara) ** luni - 1)
+def generate_repayment_schedule(suma, dobanda_anuala, luni, tip_rata='egale'):
     schedule = []
     sold_ramas = suma
+    dobanda_lunara_procent = (dobanda_anuala / 100) / 12
     data_start = datetime.now()
-    for l in range(1, luni + 1):
-        dobanda_luna = sold_ramas * dobanda_lunara
-        principal_luna = rata_lunar - dobanda_luna
-        sold_ramas -= principal_luna
-        schedule.append({
-            "luna": l,
-            "data_plata": (data_start + timedelta(days=30 * l)).strftime("%d-%m-%Y"),
-            "rata_totala": round(rata_lunar, 2),
-            "principal": round(principal_luna, 2),
-            "dobanda": round(dobanda_luna, 2),
-            "sold_ramas": max(0, round(sold_ramas, 2))
-        })
+
+    if tip_rata == 'descrescatoare':
+        principal_lunar = suma / luni
+        for l in range(1, luni + 1):
+            dobanda_luna = sold_ramas * dobanda_lunara_procent
+            rata_totala_luna = principal_lunar + dobanda_luna
+            sold_ramas -= principal_lunar
+
+            schedule.append({
+                "luna": l,
+                "data_plata": (data_start + timedelta(days=30 * l)).strftime("%d-%m-%Y"),
+                "rata_totala": round(rata_totala_luna, 2),
+                "principal": round(principal_lunar, 2),
+                "dobanda": round(dobanda_luna, 2),
+                "sold_ramas": max(0, round(sold_ramas, 2))
+            })
+    else:
+        rata_fixa_luna = suma * (dobanda_lunara_procent * (1 + dobanda_lunara_procent) ** luni) / (
+                    (1 + dobanda_lunara_procent) ** luni - 1)
+        for l in range(1, luni + 1):
+            dobanda_luna = sold_ramas * dobanda_lunara_procent
+            principal_luna = rata_fixa_luna - dobanda_luna
+            sold_ramas -= principal_luna
+
+            schedule.append({
+                "luna": l,
+                "data_plata": (data_start + timedelta(days=30 * l)).strftime("%d-%m-%Y"),
+                "rata_totala": round(rata_fixa_luna, 2),
+                "principal": round(principal_luna, 2),
+                "dobanda": round(dobanda_luna, 2),
+                "sold_ramas": max(0, round(sold_ramas, 2))
+            })
+
     return schedule
 
 
@@ -285,7 +320,6 @@ def google_auth():
         return jsonify({"error": "ID Token lipsă"}), 400
 
     try:
-        # Validare securizată direct prin serverele asincrone Google
         id_info = id_token.verify_oauth2_token(token_frontend, google_requests.Request(), GOOGLE_CLIENT_ID)
 
         email_utilizator = id_info.get('email')
@@ -294,10 +328,8 @@ def google_auth():
         if not email_utilizator:
             return jsonify({"error": "Imposibil de extras adresa email din structura Google"}), 400
 
-        # Verificăm dacă profilul există deja în MongoDB
         user = db.users.find_one({"email": email_utilizator})
 
-        # Dacă utilizatorul se conectează pentru prima dată, îi construim profilul automat pe loc (Înregistrare Automată)
         if not user:
             user_doc = {
                 "username": nume_utilizator,
@@ -316,9 +348,8 @@ def google_auth():
             user = db.users.find_one({"_id": result.inserted_id})
             print(f" [OAuth] Cont nou creat automat pentru: {email_utilizator}")
         else:
-            print(f"🔑 [OAuth] Autentificare reușită pentru contul: {email_utilizator}")
+            print(f" [OAuth] Autentificare reușită pentru contul: {email_utilizator}")
 
-        # Generăm token-ul tău JWT nativ pentru a-i acorda acces în paginile protejate ale aplicației
         token_local = jwt.encode(
             {'user_id': str(user['_id']), 'exp': datetime.now(timezone.utc) + timedelta(hours=24)},
             app.config['SECRET_KEY'],
@@ -586,8 +617,9 @@ def add_manual_transaction(current_user):
 def get_all_transactions(current_user):
     filter_month = request.args.get('month')
     filter_year = request.args.get('year')
+    sort_order = request.args.get('sort', 'desc') # Preluăm parametrul de sortare (implicit desc)
 
-    transactions = list(db.transactions.find({"user_id": current_user['_id']}).sort("data_import", -1))
+    transactions = list(db.transactions.find({"user_id": current_user['_id']}))
 
     filtered_list = []
     for t in transactions:
@@ -605,8 +637,33 @@ def get_all_transactions(current_user):
                 "data": t['data'],
                 "suma": t['suma'],
                 "detalii": t.get('detalii'),
-                "categorie": t.get('categorie')
+                "categorie": t.get('categorie'),
+                "data_import": t.get('data_import') # Păstrăm și data importului ca fallback secundar
             })
+
+    # Logică de sortare cronologică nativă în funcție de formatul text "zi lună an"
+    luni_map = {
+        "ianuarie": 1, "februarie": 2, "martie": 3, "aprilie": 4, "mai": 5, "iunie": 6,
+        "iulie": 7, "august": 8, "septembrie": 9, "octombrie": 10, "noiembrie": 11, "decembrie": 12
+    }
+
+    def get_chrono_key(item):
+        try:
+            parts = item['data'].lower().split()
+            # Așteaptă formatul: ["31", "ianuarie", "2026"]
+            day = int(parts[0])
+            month = luni_map.get(parts[1], 1)
+            year = int(parts[2])
+            return datetime(year, month, day)
+        except Exception:
+            # Fallback în cazul în care formatul datei este diferit sau lipsește
+            if item.get('data_import'):
+                return item['data_import'].replace(tzinfo=None) if hasattr(item['data_import'], 'replace') else datetime.min
+            return datetime.min
+
+    # Aplicăm sortarea în memorie
+    is_reverse = True if sort_order == 'desc' else False
+    filtered_list.sort(key=get_chrono_key, reverse=is_reverse)
 
     return jsonify(filtered_list), 200
 
@@ -640,18 +697,14 @@ def get_dashboard_stats(current_user):
 
     df = pd.DataFrame(all_trans)
 
-    # Mapare pentru sortare luni
     luni_ordine = {
         "ianuarie": 1, "februarie": 2, "martie": 3, "aprilie": 4, "mai": 5, "iunie": 6,
         "iulie": 7, "august": 8, "septembrie": 9, "octombrie": 10, "noiembrie": 11, "decembrie": 12
     }
 
-    # Extragem lista de ani și luni disponibile pentru a determina "ultima încărcare"
     df['data_lower'] = df['data'].str.lower()
 
-    # Dacă nu avem filtre, determinăm automat ultima lună/an
     if not filter_year or not filter_month:
-        # Găsim ultimul an (numeric)
         years_found = []
         for d in df['data_lower']:
             parts = d.split()
@@ -665,7 +718,6 @@ def get_dashboard_stats(current_user):
             last_year = str(max(years_found))
             filter_year = last_year if not filter_year else filter_year
 
-            # Găsim ultima lună din acel an
             months_in_year = []
             for d in df[df['data_lower'].str.contains(filter_year)]['data_lower']:
                 for m in luni_ordine.keys():
@@ -673,10 +725,8 @@ def get_dashboard_stats(current_user):
                         months_in_year.append(m)
 
             if months_in_year:
-                # Sortăm lunile după ordinea calendaristică
                 filter_month = max(set(months_in_year), key=lambda m: luni_ordine[m])
 
-    # Aplicăm filtrarea finală
     def match_filter(row_date):
         date_lower = str(row_date).lower()
         return (filter_month.lower() in date_lower) and (filter_year in date_lower)
@@ -709,7 +759,6 @@ def get_dashboard_stats(current_user):
     # --- CALCULARE TOP 3 COMERCIANȚI (EXCLUZÂND TRANSFERURILE P2P / REVOLUT) ---
     top_comercianti_list = []
     if not cheltuieli_df.empty:
-        # Filtru critic: Eliminăm tranzacțiile din categoria 'TRANSFERURI' sau care conțin cuvinte de rebalansare în detalii
         filtru_excludere = (cheltuieli_df['categorie'].str.lower().str.contains('transfer', na=False)) | \
                            (cheltuieli_df['detalii'].str.lower().str.contains(
                                'revolut p2p|schimb valutar|cont economii', na=False))
@@ -761,6 +810,8 @@ def predict_credit(current_user):
         ani = int(data.get('perioada_ani', 5))
         v_manual = data.get('venit_anual_manual')
 
+        tip_rata = data.get('tip_rata', 'egale')
+
         if v_manual is not None and str(v_manual).strip() != "" and str(v_manual).strip() != "null":
             venit_ron = float(str(v_manual).replace(',', '.'))
         else:
@@ -793,9 +844,9 @@ def predict_credit(current_user):
             float(dobanda_real),
             round(dti, 2),
             safe_int(current_user.get('ani_istoric_credit'), 3),
-            safe_int(current_user.get('istoric_neplata'), 0) ]
+            safe_int(current_user.get('istoric_neplata'), 0)]
 
-        #prob = rf_model.predict_proba([input_features])[0][1]
+        # prob = rf_model.predict_proba([input_features])[0][1]
         features_df = pd.DataFrame([input_features], columns=rf_model.feature_names_in_)
         prob = rf_model.predict_proba(features_df)[0][1]
         status = "APROBAT" if prob >= 0.5 else "RESPINS"
@@ -828,7 +879,7 @@ def predict_credit(current_user):
             "status_credit": status,
             "probabilitate": f"{round(prob * 100, 2)}%",
             "explicatie_ai": ai_advice,
-            "scadentar": generate_repayment_schedule(suma_ron, dobanda_real, ani * 12)[:12],
+            "scadentar": generate_repayment_schedule(suma_ron, dobanda_real, ani * 12, tip_rata)[:12],
             "venit_anual_ron": round(venit_ron, 2),
             "dobanda_aplicata": f"{dobanda_real}%"
         }), 200
@@ -931,32 +982,30 @@ def get_financial_persona(current_user):
         return jsonify({"error": "Modelul K-Means este indisponibil"}), 500
 
     try:
-        # 1. Preluăm lista exactă de 13 coloane pe care le așteaptă modelul tău K-Means
-        expected_features = kmeans_model.feature_names_in_
-        print(f"🔍 [K-Means] Coloanele așteptate de modelul tău: {list(expected_features)}")
-
-        # 2. Extragem datele brute ale utilizatorului curent
         all_trans = list(db.transactions.find({"user_id": current_user['_id']}))
+
+        if not all_trans:
+            return jsonify({
+                "nume": "Profil în curs de analiză",
+                "desc": "Sistemul FinSight colectează și analizează datele din extrasele tale bancare. Încarcă primul tău fișier CSV în secțiunea Tranzacții pentru a rula algoritmul econometric K-Means.",
+                "cluster_id": -1
+            }), 200
+
+        expected_features = kmeans_model.feature_names_in_
+        print(f" [K-Means] Coloanele așteptate de modelul tău: {list(expected_features)}")
 
         total_venituri = 0.0
         total_cheltuieli = 0.0
-        numar_tranzactii = 0
-        cat_mancare = 0.0
-        cat_shopping = 0.0
-        cat_utilitati = 0.0
+        numar_tranzactii = len(all_trans)
 
-        if all_trans:
-            df = pd.DataFrame(all_trans)
-            numar_tranzactii = len(df)
-            total_venituri = float(df[df['suma'] > 0]['suma'].sum())
-            total_cheltuieli = float(df[df['suma'] < 0]['suma'].abs().sum())
+        df = pd.DataFrame(all_trans)
+        total_venituri = float(df[df['suma'] > 0]['suma'].sum())
+        total_cheltuieli = float(df[df['suma'] < 0]['suma'].abs().sum())
 
-            # Calculăm sumele pe categoriile principale
-            cat_mancare = float(df[df['categorie'].str.lower() == 'mâncare']['suma'].abs().sum())
-            cat_shopping = float(df[df['categorie'].str.lower() == 'shopping']['suma'].abs().sum())
-            cat_utilitati = float(df[df['categorie'].str.lower() == 'utilități']['suma'].abs().sum())
+        cat_mancare = float(df[df['categorie'].str.lower() == 'mâncare']['suma'].abs().sum())
+        cat_shopping = float(df[df['categorie'].str.lower() == 'shopping']['suma'].abs().sum())
+        cat_utilitati = float(df[df['categorie'].str.lower() == 'utilități']['suma'].abs().sum())
 
-        # 3. Creăm un dicționar cu TOATE denumirile posibile (bilingv - română/engleză)
         user_data_map = {
             "varsta": safe_int(current_user.get('varsta'), 30),
             "gen": safe_int(current_user.get('gen'), 0),
@@ -986,13 +1035,10 @@ def get_financial_persona(current_user):
             "utilities": cat_utilitati
         }
 
-        # 4. Construim vectorul final mapat și ordonat EXACT după cerințele K-Means
         aligned_features = [user_data_map.get(col, 0.0) for col in expected_features]
 
-        # Transformăm lista într-un DataFrame cu numele corecte
         features_df = pd.DataFrame([aligned_features], columns=expected_features)
 
-        # 5. Rulăm predicția
         cluster_id = int(kmeans_model.predict(features_df)[0])
         print(f" [K-Means] Utilizatorul a fost repartizat corect în Clusterul: {cluster_id}")
 

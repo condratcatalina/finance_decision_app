@@ -6,7 +6,6 @@
     <title>FinSight - Prognoză Financiară</title>
 
     <script>
-        // Garda de securitate - redirecționare dacă nu e logat
         if (!sessionStorage.getItem('token')) {
             window.location.href = "/auth";
         }
@@ -16,130 +15,153 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
-<body class="bg-gray-100 font-sans h-screen overflow-hidden flex">
+<body class="bg-gray-100 font-sans text-gray-800">
 
-    <aside class="w-64 bg-indigo-900 text-white flex-shrink-0 flex flex-col">
-        <div class="p-6 text-2xl font-bold border-b border-indigo-800">
-            Fin<span class="text-indigo-400">Sight</span>
-        </div>
+    <div class="flex flex-col md:flex-row h-screen overflow-hidden">
 
-        <nav class="mt-6 flex-1">
-            <a href="/" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
-                <i class="fas fa-chart-pie mr-3"></i> Dashboard
-            </a>
-            <a href="/forecast" class="block py-3 px-6 bg-indigo-800 flex items-center border-l-4 border-indigo-400">
-                <i class="fas fa-chart-line mr-3"></i> Prognoză Cheltuieli
-            </a>
-            <a href="/transactions" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
-                <i class="fas fa-table mr-3"></i> Tranzacții
-            </a>
-            <a href="/converter" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
-                <i class="fas fa-magic mr-3"></i> Convertor Extras
-            </a>
-            <a href="/simulator" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
-                <i class="fas fa-calculator mr-3"></i> Simulator Credit
-            </a>
-            <a href="/profile" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
-                <i class="fas fa-user-circle mr-3"></i> Profilul Meu
-            </a>
-        </nav>
-
-        <div class="p-4 border-t border-indigo-800">
-            <button onclick="logout()" class="w-full flex items-center py-3 px-6 text-red-400 hover:bg-red-900/30 hover:text-red-300 transition rounded-lg">
-                <i class="fas fa-sign-out-alt mr-3"></i> Deconectare
+        <header class="bg-indigo-900 text-white p-4 flex justify-between items-center md:hidden shadow-md z-50 flex-shrink-0">
+            <div class="text-xl font-bold">
+                Fin<span class="text-indigo-400">Sight</span>
+            </div>
+            <button onclick="toggleMobileSidebar()" class="p-2 text-indigo-200 hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-lg">
+                <i class="fas fa-bars text-xl"></i>
             </button>
-        </div>
-    </aside>
+        </header>
 
-    <main class="flex-1 overflow-y-auto p-8">
-        <div id="outdated-alert" class="hidden mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded shadow-sm">
-            <div class="flex items-center">
-                <i class="fas fa-exclamation-triangle text-yellow-500 mr-3"></i>
-                <div>
-                    <p class="font-bold text-yellow-800">Datele tale necesită actualizare</p>
-                    <p class="text-sm text-yellow-700">Prognoza a fost calculată de la ultima tranzacție găsită. Încarcă date noi pentru o acuratețe mai mare.</p>
-                </div>
+        <aside id="sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 w-64 bg-indigo-900 text-white flex-shrink-0 flex flex-col z-50 transition-transform duration-300 ease-in-out shadow-2xl md:shadow-none">
+            <div class="p-6 text-2xl font-bold border-b border-indigo-800 hidden md:block">
+                Fin<span class="text-indigo-400">Sight</span>
             </div>
-        </div>
 
-        <div class="flex justify-between items-end mb-8">
-            <div>
-                <h1 class="text-3xl font-bold text-gray-800">Prognoză Financiară</h1>
-                <p class="text-gray-500 italic">Predictibilitate prin Regresie Liniară (Trend)</p>
+            <div class="p-4 flex justify-end md:hidden">
+                <button onclick="toggleMobileSidebar()" class="text-indigo-300 hover:text-white text-lg p-1">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            <div class="w-64">
-                <p class="text-[10px] font-bold text-gray-400 uppercase mb-1 tracking-wider">Încredere în prognoză</p>
-                <div class="w-full bg-gray-200 rounded-full h-2">
-                    <div id="confidence-bar" class="bg-indigo-500 h-2 rounded-full transition-all duration-1000" style="width: 0%"></div>
-                </div>
-                <p id="confidence-text" class="text-[9px] text-right mt-1 text-gray-500 font-bold uppercase">Se calculează...</p>
+
+            <nav class="mt-2 md:mt-6 flex-1 px-4 md:px-0 space-y-1">
+                <a href="/" class="block py-3 px-6 hover:bg-indigo-800 flex items-center rounded md:rounded-none transition">
+                    <i class="fas fa-chart-pie mr-3 w-5 text-center"></i> Dashboard
+                </a>
+                <a href="/forecast" class="block py-3 px-6 bg-indigo-800 flex items-center border-l-4 border-indigo-400 rounded md:rounded-none">
+                    <i class="fas fa-chart-line mr-3 w-5 text-center"></i> Prognoză Cheltuieli
+                </a>
+                <a href="/transactions" class="block py-3 px-6 hover:bg-indigo-800 flex items-center rounded md:rounded-none transition">
+                    <i class="fas fa-table mr-3 w-5 text-center"></i> Tranzacții
+                </a>
+                <a href="/converter" class="block py-3 px-6 hover:bg-indigo-800 flex items-center rounded md:rounded-none transition">
+                    <i class="fas fa-magic mr-3 w-5 text-center"></i> Convertor Extras
+                </a>
+                <a href="/simulator" class="block py-3 px-6 hover:bg-indigo-800 flex items-center rounded md:rounded-none transition">
+                    <i class="fas fa-calculator mr-3 w-5 text-center"></i> Simulator Credit
+                </a>
+                <a href="/profile" class="block py-3 px-6 hover:bg-indigo-800 flex items-center rounded md:rounded-none transition">
+                    <i class="fas fa-user-circle mr-3 w-5 text-center"></i> Profilul Meu
+                </a>
+            </nav>
+
+            <div class="p-4 border-t border-indigo-800">
+                <button onclick="logout()" class="w-full flex items-center py-3 px-6 text-red-400 hover:bg-red-900/30 hover:text-red-300 transition rounded-lg">
+                    <i class="fas fa-sign-out-alt mr-3 w-5 text-center"></i> Deconectare
+                </button>
             </div>
-        </div>
+        </aside>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div class="lg:col-span-2 space-y-6">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="font-bold text-gray-700">Evoluție & Estimare Cheltuieli</h3>
-                        <span class="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-1 rounded font-bold uppercase">Marjă eroare 15%</span>
-                    </div>
-                    <div class="h-80">
-                        <canvas id="forecastChart"></canvas>
-                    </div>
-                </div>
+        <div id="sidebar-overlay" onclick="toggleMobileSidebar()" class="hidden fixed inset-0 bg-black/50 z-40 md:hidden transition-opacity duration-300"></div>
 
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+        <main class="flex-1 overflow-y-auto p-4 md:p-8">
+
+            <div id="outdated-alert" class="hidden mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded shadow-sm">
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-triangle text-yellow-500 mr-3 flex-shrink-0"></i>
                     <div>
-                        <p class="text-xs font-bold text-gray-400 uppercase mb-1">Acuratețe Model (R²)</p>
-                        <h2 id="r2-val" class="text-3xl font-bold text-gray-800">--%</h2>
-                    </div>
-                    <div class="max-w-xs text-right">
-                        <p id="r2-desc" class="text-sm text-gray-500">Stilul tău de viață este analizat...</p>
+                        <p class="font-bold text-yellow-800 text-sm">Datele tale necesită actualizare</p>
+                        <p class="text-xs text-yellow-700 mt-0.5">Prognoza a fost calculată de la ultima tranzacție găsită. Încarcă date noi pentru o acuratețe mai mare.</p>
                     </div>
                 </div>
             </div>
 
-            <div class="space-y-6">
-                <div class="bg-indigo-900 text-white p-6 rounded-xl shadow-lg border-b-4 border-indigo-400">
-                    <h3 class="font-bold mb-4 flex items-center">
-                        <i class="fas fa-magic mr-2 text-indigo-300"></i> Simulare: "Ce-ar fi dacă?"
-                    </h3>
-                    <div class="space-y-4">
-                        <div class="flex justify-between text-sm">
-                            <span>Reducere cheltuieli</span>
-                            <span class="font-bold text-indigo-300"><span id="reduce-val">0</span>%</span>
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-6 md:mb-8">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Prognoză Financiară</h1>
+                    <p class="text-sm text-gray-500 italic mt-0.5">Predictibilitate prin Regresie Liniară (Trend)</p>
+                </div>
+                <div class="w-full sm:w-64 bg-white sm:bg-transparent p-3 sm:p-0 rounded-xl border sm:border-none border-gray-100">
+                    <p class="text-[10px] font-bold text-gray-400 uppercase mb-1 tracking-wider">Încredere în prognoză</p>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div id="confidence-bar" class="bg-indigo-500 h-2 rounded-full transition-all duration-1000" style="width: 0%"></div>
+                    </div>
+                    <p id="confidence-text" class="text-[9px] text-right mt-1 text-gray-500 font-bold uppercase tracking-wide">Se calculează...</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-6">
+                            <h3 class="font-bold text-gray-700 text-base">Evoluție & Estimare Cheltuieli</h3>
+                            <span class="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-1 rounded font-bold uppercase tracking-wider">Marjă eroare 15%</span>
                         </div>
-                        <input type="range" id="slider-reduce" min="0" max="50" value="0"
-                               class="w-full h-2 bg-indigo-800 rounded-lg appearance-none cursor-pointer accent-indigo-400">
-                        <p class="text-[10px] opacity-60 italic leading-relaxed">
-                            Ajustează procentul pentru a observa impactul unei economii ipotetice asupra trendului tău pe următoarele luni.
-                        </p>
+                        <div class="h-64 md:h-80 relative">
+                            <canvas id="forecastChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Acuratețe Model (R²)</p>
+                            <h2 id="r2-val" class="text-2xl md:text-3xl font-bold text-gray-800 mt-1">--%</h2>
+                        </div>
+                        <div class="w-full sm:max-w-xs text-left sm:text-right">
+                            <p id="r2-desc" class="text-sm text-gray-500 leading-snug">Stilul tău de viață este analizat...</p>
+                        </div>
                     </div>
                 </div>
 
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                    <h3 class="font-bold mb-4 text-gray-700 flex items-center">
-                        <i class="fas fa-calendar-plus mr-2 text-green-500"></i> Cheltuieli Planificate
-                    </h3>
-                    <div class="space-y-3">
-                        <input type="text" id="ev-name" placeholder="Ex: Revizie, Vacanță..." class="w-full border p-2 rounded text-sm focus:ring-2 focus:ring-green-400 outline-none">
-                        <div class="relative">
-                            <input type="number" id="ev-sum" placeholder="Sumă estimată" class="w-full border p-2 rounded text-sm focus:ring-2 focus:ring-green-400 outline-none pr-10">
-                            <span class="absolute right-3 top-2 text-gray-400 text-sm">RON</span>
+                <div class="space-y-6">
+                    <div class="bg-indigo-900 text-white p-5 md:p-6 rounded-xl shadow-lg border-b-4 border-indigo-400">
+                        <h3 class="font-bold mb-4 flex items-center text-sm md:text-base">
+                            <i class="fas fa-magic mr-2 text-indigo-300"></i> Simulare: "Ce-ar fi dacă?"
+                        </h3>
+                        <div class="space-y-4">
+                            <div class="flex justify-between text-sm">
+                                <span>Reducere cheltuieli</span>
+                                <span class="font-bold text-indigo-300"><span id="reduce-val">0</span>%</span>
+                            </div>
+                            <input type="range" id="slider-reduce" min="0" max="50" value="0"
+                                   class="w-full h-2 bg-indigo-800 rounded-lg appearance-none cursor-pointer accent-indigo-400">
+                            <p class="text-[10px] opacity-60 italic leading-relaxed">
+                                Ajustează procentul pentru a observa impactul unei economii ipotetice asupra trendului tău pe următoarele luni.
+                            </p>
                         </div>
-                        <select id="ev-month" class="w-full border p-2 rounded text-sm outline-none">
-                            <option value="0">Luna 1 (Prognoză)</option>
-                            <option value="1">Luna 2 (Prognoză)</option>
-                            <option value="2">Luna 3 (Prognoză)</option>
-                        </select>
-                        <button onclick="addEvent()" class="w-full bg-green-500 text-white py-2 rounded font-bold hover:bg-green-600 transition shadow-md">
-                            Adaugă pe Grafic
-                        </button>
+                    </div>
+
+                    <div class="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h3 class="font-bold mb-4 text-gray-700 flex items-center text-sm md:text-base">
+                            <i class="fas fa-calendar-plus mr-2 text-green-500"></i> Cheltuieli Planificate
+                        </h3>
+                        <div class="space-y-3">
+                            <input type="text" id="ev-name" placeholder="Ex: Revizie, Vacanță..." class="w-full border p-2.5 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-green-400 outline-none transition">
+                            <div class="relative">
+                                <input type="number" id="ev-sum" placeholder="Sumă estimată" class="w-full border p-2.5 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-green-400 outline-none pr-12 transition">
+                                <span class="absolute right-3 top-3 text-gray-400 text-xs font-bold">RON</span>
+                            </div>
+                            <select id="ev-month" class="w-full border p-2.5 rounded-lg text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none transition">
+                                <option value="0">Luna 1 (Prognoză)</option>
+                                <option value="1">Luna 2 (Prognoză)</option>
+                                <option value="2">Luna 3 (Prognoză)</option>
+                            </select>
+                            <button onclick="addEvent()" class="w-full bg-green-500 text-white py-2.5 rounded-lg font-bold hover:bg-green-600 transition shadow-md text-sm mt-1">
+                                Adaugă pe Grafic
+                            </button>
+                        </div>
                     </div>
                 </div>
+
             </div>
-        </div>
-    </main>
+        </main>
+    </div>
 
     <script>
         const API_URL = window.location.origin;
@@ -147,7 +169,14 @@
         let chart = null;
         let events = [];
 
-        // ... Scriptul rămâne neschimbat ...
+        // FUNCTIE TOGGLE MENIU MOBIL
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
+
         function logout() {
             sessionStorage.removeItem('token');
             window.location.href = "/auth";
@@ -178,7 +207,7 @@
             const r2 = rawData.metrics.r_squared;
             document.getElementById('r2-val').innerText = r2 + "%";
 
-            let desc = "Cheltuielile tale sunt foarte fluctuante, prognoza are un caracter informativ.";
+            let desc = "Cheltuielile tale sunt foarte fluctuante, prognoza are un character informativ.";
             if(r2 > 50) desc = "Trendul tău este stabil, oferind o bază bună pentru planificare.";
             if(r2 > 80) desc = "Ai un stil de viață foarte predictibil. Prognoza este de înaltă încredere.";
             document.getElementById('r2-desc').innerText = desc;
@@ -279,7 +308,11 @@
                     interaction: { mode: 'index', intersect: false },
                     plugins: {
                         legend: {
+                            position: 'bottom',
                             labels: {
+                                padding: 12,
+                                usePointStyle: true,
+                                font: { size: 11 },
                                 filter: (item) => !item.text.includes('Confidență') && !item.text.includes('Marjă')
                             }
                         },
@@ -302,9 +335,12 @@
                         y: {
                             beginAtZero: false,
                             grid: { borderDash: [2, 2] },
-                            ticks: { callback: (value) => value.toLocaleString() + ' RON' }
+                            ticks: { callback: (value) => value.toLocaleString() + ' RON', font: { size: 10 } }
                         },
-                        x: { grid: { display: false } }
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 45 }
+                        }
                     }
                 }
             });

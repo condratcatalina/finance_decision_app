@@ -7,79 +7,99 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
-<body class="bg-gray-50 font-sans">
+<body class="bg-gray-50 font-sans text-gray-800">
     <script>
         if (!sessionStorage.getItem('token')) window.location.href = '/auth';
     </script>
 
-    <div class="flex h-screen overflow-hidden">
-        <aside class="w-64 bg-indigo-900 text-white flex-shrink-0 flex flex-col">
-            <div class="p-6 text-2xl font-bold border-b border-indigo-800">
+    <div class="flex flex-col md:flex-row h-screen overflow-hidden">
+
+        <header class="bg-indigo-900 text-white p-4 flex justify-between items-center md:hidden shadow-md z-50 flex-shrink-0">
+            <div class="text-xl font-bold">
                 Fin<span class="text-indigo-400">Sight</span>
             </div>
-            <nav class="mt-6 flex-1">
-                <a href="/" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
-                    <i class="fas fa-chart-pie mr-3"></i> Dashboard
+            <button onclick="toggleMobileSidebar()" class="p-2 text-indigo-200 hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-lg">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+        </header>
+
+        <aside id="sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 w-64 bg-indigo-900 text-white flex-shrink-0 flex flex-col z-50 transition-transform duration-300 ease-in-out shadow-2xl md:shadow-none">
+            <div class="p-6 text-2xl font-bold border-b border-indigo-800 hidden md:block">
+                Fin<span class="text-indigo-400">Sight</span>
+            </div>
+
+            <div class="p-4 flex justify-end md:hidden">
+                <button onclick="toggleMobileSidebar()" class="text-indigo-300 hover:text-white text-lg p-1">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <nav class="mt-2 md:mt-6 flex-1 px-4 md:px-0 space-y-1">
+                <a href="/" class="block py-3 px-6 hover:bg-indigo-800 flex items-center rounded md:rounded-none transition">
+                    <i class="fas fa-chart-pie mr-3 w-5 text-center"></i> Dashboard
                 </a>
-                <a href="/forecast" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
-                    <i class="fas fa-chart-line mr-3"></i> Prognoză Cheltuieli
+                <a href="/forecast" class="block py-3 px-6 hover:bg-indigo-800 flex items-center rounded md:rounded-none transition">
+                    <i class="fas fa-chart-line mr-3 w-5 text-center"></i> Prognoză Cheltuieli
                 </a>
-                <a href="/transactions" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
-                    <i class="fas fa-table mr-3"></i> Tranzacții
+                <a href="/transactions" class="block py-3 px-6 hover:bg-indigo-800 flex items-center rounded md:rounded-none transition">
+                    <i class="fas fa-table mr-3 w-5 text-center"></i> Tranzacții
                 </a>
-                <a href="/converter" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
-                    <i class="fas fa-magic mr-3"></i> Convertor Extras
+                <a href="/converter" class="block py-3 px-6 hover:bg-indigo-800 flex items-center rounded md:rounded-none transition">
+                    <i class="fas fa-magic mr-3 w-5 text-center"></i> Convertor Extras
                 </a>
-                <a href="/simulator" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
-                    <i class="fas fa-calculator mr-3"></i> Simulator Credit
+                <a href="/simulator" class="block py-3 px-6 hover:bg-indigo-800 flex items-center rounded md:rounded-none transition">
+                    <i class="fas fa-calculator mr-3 w-5 text-center"></i> Simulator Credit
                 </a>
-                <a href="/profile" class="block py-3 px-6 bg-indigo-800 flex items-center border-l-4 border-indigo-400">
-                    <i class="fas fa-user-circle mr-3"></i> Profilul Meu
+                <a href="/profile" class="block py-3 px-6 bg-indigo-800 flex items-center border-l-4 border-indigo-400 rounded md:rounded-none">
+                    <i class="fas fa-user-circle mr-3 w-5 text-center"></i> Profilul Meu
                 </a>
             </nav>
             <div class="p-4 border-t border-indigo-800">
                 <button onclick="logout()" class="w-full flex items-center py-3 px-6 text-red-400 hover:bg-red-900/30 transition rounded-lg">
-                    <i class="fas fa-sign-out-alt mr-3"></i> Deconectare
+                    <i class="fas fa-sign-out-alt mr-3 w-5 text-center"></i> Deconectare
                 </button>
             </div>
         </aside>
 
-        <main class="flex-1 overflow-y-auto p-10">
-            <div class="max-w-4xl mx-auto">
-                <div class="flex items-center justify-between mb-8">
+        <div id="sidebar-overlay" onclick="toggleMobileSidebar()" class="hidden fixed inset-0 bg-black/50 z-40 md:hidden transition-opacity duration-300"></div>
+
+        <main class="flex-1 overflow-y-auto p-4 md:p-10">
+            <div class="max-w-4xl mx-auto w-full">
+
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 md:mb-8">
                     <div>
-                        <h1 class="text-3xl font-bold text-gray-800">Setări Profil</h1>
-                        <p class="text-gray-500">Actualizează datele folosite pentru analiza scorului de credit.</p>
+                        <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Setări Profil</h1>
+                        <p class="text-sm text-gray-500 mt-0.5">Actualizează datele folosite pentru analiza scorului de credit.</p>
                     </div>
-                    <div class="bg-indigo-100 text-indigo-700 px-4 py-2 rounded-full text-sm font-bold" id="userEmail">
+                    <div class="bg-indigo-100 text-indigo-700 px-4 py-2 rounded-full text-xs md:text-sm font-bold w-full sm:w-auto text-center truncate" id="userEmail">
                         email@exemplu.com
                     </div>
                 </div>
 
-                <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="p-8">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white rounded-2xl md:rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-5 md:p-8">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                             <div class="md:col-span-2">
-                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Nume Complet / Username</label>
-                                <input type="text" id="username" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-400">
+                                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Nume Complet / Username</label>
+                                <input type="text" id="username" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-400 text-sm">
                             </div>
 
                             <div>
-                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Vârstă</label>
-                                <input type="number" id="varsta" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-400">
+                                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Vârstă</label>
+                                <input type="number" id="varsta" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-400 text-sm">
                             </div>
 
                             <div>
-                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Gen</label>
-                                <select id="gen" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-400">
+                                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Gen</label>
+                                <select id="gen" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-400 text-sm bg-white">
                                     <option value="0">Masculin</option>
                                     <option value="1">Feminin</option>
                                 </select>
                             </div>
 
                             <div>
-                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Nivel Educație</label>
-                                <select id="educatie" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-400">
+                                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Nivel Educație</label>
+                                <select id="educatie" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-400 text-sm bg-white">
                                     <option value="1">Liceu</option>
                                     <option value="2">Licență</option>
                                     <option value="3">Master</option>
@@ -88,13 +108,13 @@
                             </div>
 
                             <div>
-                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Vechime (Ani de muncă)</label>
-                                <input type="number" id="vechime" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-400">
+                                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Vechime (Ani de muncă)</label>
+                                <input type="number" id="vechime" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-400 text-sm">
                             </div>
 
                             <div>
-                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Tip Locuință</label>
-                                <select id="tip_locuinta" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-400">
+                                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Tip Locuință</label>
+                                <select id="tip_locuinta" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-400 text-sm bg-white">
                                     <option value="0">Chirie</option>
                                     <option value="1">Proprietar</option>
                                     <option value="2">Locuință de serviciu / Altele</option>
@@ -102,21 +122,21 @@
                             </div>
 
                             <div>
-                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Vechime Istoric Credit (Ani)</label>
-                                <input type="number" id="ani_istoric_credit" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-400">
+                                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Vechime Istoric Credit (Ani)</label>
+                                <input type="number" id="ani_istoric_credit" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-400 text-sm">
                             </div>
 
                             <div class="md:col-span-2">
-                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Ai avut întârzieri la plată în trecut?</label>
-                                <select id="istoric_neplata" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-400">
+                                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Ai avut întârzieri la plată în trecut?</label>
+                                <select id="istoric_neplata" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-400 text-sm bg-white">
                                     <option value="0">Nu, am plătit mereu la timp</option>
                                     <option value="1">Da, am avut incidente de plată</option>
                                 </select>
                             </div>
                         </div>
 
-                        <div class="mt-10 flex justify-end">
-                            <button onclick="saveProfile()" class="px-10 py-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-200">
+                        <div class="mt-6 md:mt-10 flex justify-end">
+                            <button onclick="saveProfile()" class="w-full md:w-auto px-10 py-3.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-100 text-sm">
                                 Salvează Modificările
                             </button>
                         </div>
@@ -130,7 +150,14 @@
         const API_URL = window.location.origin;
         const token = sessionStorage.getItem('token');
 
-        // ... Scriptul rămâne neschimbat ...
+        // FUNCTIE TOGGLE MENIU MOBIL
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
+
         async function loadProfile() {
             try {
                 const res = await fetch(`${API_URL}/get-profile`, {
@@ -177,9 +204,9 @@
                 });
 
                 if (res.ok) {
-                    alert("✅ Profilul a fost actualizat!");
+                    alert(" Profilul a fost actualizat!");
                 } else {
-                    alert("❌ Eroare la salvare.");
+                    alert(" Eroare la salvare.");
                 }
             } catch (err) {
                 console.error(err);

@@ -15,47 +15,81 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
-<body class="bg-gray-100 font-sans">
+<body class="bg-gray-100 font-sans text-gray-800">
 
-    <div class="flex h-screen overflow-hidden">
-        <aside class="w-64 bg-indigo-900 text-white flex-shrink-0 flex flex-col">
-            <div class="p-6 text-2xl font-bold border-b border-indigo-800">
+    <div class="flex flex-col md:flex-row h-screen overflow-hidden">
+
+        <header class="bg-indigo-900 text-white p-4 flex justify-between items-center md:hidden shadow-md z-50 flex-shrink-0">
+            <div class="text-xl font-bold">
+                Fin<span class="text-indigo-400">Sight</span>
+            </div>
+            <button onclick="toggleMobileSidebar()" class="p-2 text-indigo-200 hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-lg">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+        </header>
+
+        <aside id="sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 w-64 bg-indigo-900 text-white flex-shrink-0 flex flex-col z-50 transition-transform duration-300 ease-in-out shadow-2xl md:shadow-none">
+            <div class="p-6 text-2xl font-bold border-b border-indigo-800 hidden md:block">
                 Fin<span class="text-indigo-400">Sight</span>
             </div>
 
-            <nav class="mt-6 flex-1">
-                <a href="/" class="block py-3 px-6 bg-indigo-800 flex items-center border-l-4 border-indigo-400">
-                    <i class="fas fa-chart-pie mr-3"></i> Dashboard
+            <div class="p-4 flex justify-end md:hidden">
+                <button onclick="toggleMobileSidebar()" class="text-indigo-300 hover:text-white text-lg p-1">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <nav class="mt-2 md:mt-6 flex-1 px-4 md:px-0 space-y-1">
+                <a href="/" class="block py-3 px-6 bg-indigo-800 flex items-center border-l-4 border-indigo-400 rounded md:rounded-none">
+                    <i class="fas fa-chart-pie mr-3 w-5 text-center"></i> Dashboard
                 </a>
-                <a href="/forecast" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
-                    <i class="fas fa-chart-line mr-3"></i> Prognoză Cheltuieli
+                <a href="/forecast" class="block py-3 px-6 hover:bg-indigo-800 flex items-center rounded md:rounded-none transition">
+                    <i class="fas fa-chart-line mr-3 w-5 text-center"></i> Prognoză Cheltuieli
                 </a>
-                <a href="/transactions" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
-                    <i class="fas fa-table mr-3"></i> Tranzacții
+                <a href="/transactions" class="block py-3 px-6 hover:bg-indigo-800 flex items-center rounded md:rounded-none transition">
+                    <i class="fas fa-table mr-3 w-5 text-center"></i> Tranzacții
                 </a>
-                <a href="/converter" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
-                    <i class="fas fa-magic mr-3"></i> Convertor Extras
+                <a href="/converter" class="block py-3 px-6 hover:bg-indigo-800 flex items-center rounded md:rounded-none transition">
+                    <i class="fas fa-magic mr-3 w-5 text-center"></i> Convertor Extras
                 </a>
-                <a href="/simulator" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
-                    <i class="fas fa-calculator mr-3"></i> Simulator Credit
+                <a href="/simulator" class="block py-3 px-6 hover:bg-indigo-800 flex items-center rounded md:rounded-none transition">
+                    <i class="fas fa-calculator mr-3 w-5 text-center"></i> Simulator Credit
                 </a>
-                <a href="/profile" class="block py-3 px-6 hover:bg-indigo-800 flex items-center">
-                    <i class="fas fa-user-circle mr-3"></i> Profilul Meu
+                <a href="/profile" class="block py-3 px-6 hover:bg-indigo-800 flex items-center rounded md:rounded-none transition">
+                    <i class="fas fa-user-circle mr-3 w-5 text-center"></i> Profilul Meu
                 </a>
             </nav>
 
             <div class="p-4 border-t border-indigo-800">
                 <button onclick="logout()" class="w-full flex items-center py-3 px-6 text-red-400 hover:bg-red-900/30 hover:text-red-300 transition rounded-lg">
-                    <i class="fas fa-sign-out-alt mr-3"></i> Deconectare
+                    <i class="fas fa-sign-out-alt mr-3 w-5 text-center"></i> Deconectare
                 </button>
             </div>
         </aside>
 
-        <main class="flex-1 overflow-y-auto p-8">
-            <div class="flex flex-wrap gap-4 mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100 items-center">
-                <div class="flex items-center gap-2">
-                    <label class="text-sm font-bold text-gray-400 uppercase">Luna:</label>
-                    <select id="filter-month" onchange="updateDashboard()" class="border p-2 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+        <div id="sidebar-overlay" onclick="toggleMobileSidebar()" class="hidden fixed inset-0 bg-black/50 z-40 md:hidden transition-opacity duration-300"></div>
+
+        <main class="flex-1 overflow-y-auto p-4 md:p-8">
+
+            <div id="profile-warning-banner" class="hidden mb-6 bg-amber-50 border-l-4 border-amber-500 p-4 rounded-xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 bg-amber-100 text-amber-700 rounded-lg flex-shrink-0">
+                        <i class="fas fa-user-edit text-lg"></i>
+                    </div>
+                    <div>
+                        <p class="font-bold text-amber-900 text-sm">Date profil precompletate standard</p>
+                        <p class="text-xs text-amber-700 mt-0.5">Pentru ca analiza AI și simularea de credit să fie 100% exacte, te rugăm să îți actualizezi datele tale reale.</p>
+                    </div>
+                </div>
+                <a href="/profile" class="w-full sm:w-auto text-center bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-4 py-2 rounded-lg transition shadow-sm flex-shrink-0">
+                    Configurează Profilul
+                </a>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-4 mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100 items-start sm:items-center">
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <label class="text-sm font-bold text-gray-400 uppercase w-12 sm:w-auto">Luna:</label>
+                    <select id="filter-month" onchange="updateDashboard()" class="w-full sm:w-auto border p-2 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white">
                         <option value="ianuarie">Ianuarie</option>
                         <option value="februarie">Februarie</option>
                         <option value="martie">Martie</option>
@@ -70,9 +104,9 @@
                         <option value="decembrie">Decembrie</option>
                     </select>
                 </div>
-                <div class="flex items-center gap-2">
-                    <label class="text-sm font-bold text-gray-400 uppercase">An:</label>
-                    <select id="filter-year" onchange="updateDashboard()" class="border p-2 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <label class="text-sm font-bold text-gray-400 uppercase w-12 sm:w-auto">An:</label>
+                    <select id="filter-year" onchange="updateDashboard()" class="w-full sm:w-auto border p-2 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white">
                         <option value="2024">2024</option>
                         <option value="2025">2025</option>
                         <option value="2026">2026</option>
@@ -80,43 +114,44 @@
                 </div>
             </div>
 
-            <h1 class="text-3xl font-bold text-gray-800 mb-8">Insight-urile tale financiare</h1>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8">Insight-urile tale financiare</h1>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-3">
-                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
-                    <p class="text-xs font-bold text-gray-400 uppercase">Venit Total</p>
-                    <h2 id="total-venit" class="text-2xl font-bold text-gray-800">0.00 RON</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-4">
+                <div class="bg-white p-5 md:p-6 rounded-xl shadow-sm border-l-4 border-green-500">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Venit Total</p>
+                    <h2 id="total-venit" class="text-2xl font-bold text-gray-800 mt-1">0.00 RON</h2>
                     <p id="label-venit-period" class="text-[10px] text-gray-400 mt-1">Încărcare...</p>
                 </div>
 
-                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500">
-                    <p class="text-xs font-bold text-gray-400 uppercase">Cheltuieli Totale</p>
-                    <h2 id="total-cheltuieli" class="text-2xl font-bold text-gray-800">0.00 RON</h2>
+                <div class="bg-white p-5 md:p-6 rounded-xl shadow-sm border-l-4 border-red-500">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Cheltuieli Totale</p>
+                    <h2 id="total-cheltuieli" class="text-2xl font-bold text-gray-800 mt-1">0.00 RON</h2>
                     <p id="label-cheltuieli-period" class="text-[10px] text-gray-400 mt-1">Încărcare...</p>
                 </div>
 
-                <div id="persona-card" class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-gray-300 transition-all duration-500">
-                    <p class="text-xs font-bold text-gray-400 uppercase">Profil Financiar</p>
-                    <h2 id="persona-name" class="text-xl font-bold text-gray-600">...</h2>
+                <div id="persona-card" class="bg-white p-5 md:p-6 rounded-xl shadow-sm border-l-4 border-gray-300 transition-all duration-500">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Profil Financiar</p>
+                    <h2 id="persona-name" class="text-xl font-bold text-gray-600 mt-1">...</h2>
                     <p class="text-[10px] text-gray-400 mt-1">Calculat prin algoritmul K-Means</p>
                 </div>
             </div>
 
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-8 flex items-center gap-3">
-                <div class="p-2 bg-indigo-50 rounded-lg text-indigo-600">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 md:mb-8 flex items-center gap-3">
+                <div class="p-2 bg-indigo-50 rounded-lg text-indigo-600 flex-shrink-0">
                     <i class="fas fa-heartbeat text-lg"></i>
                 </div>
-                <div class="text-sm">
-                    <span class="font-bold text-gray-500 uppercase text-xs tracking-wider">Indicator Sănătate Financiară:</span>
-                    <span id="savings-rate-text" class="ml-1 font-medium text-gray-700">Se analizează soldul...</span>
+                <div class="text-sm leading-snug">
+                    <span class="font-bold text-gray-500 uppercase text-xs tracking-wider block sm:inline">Indicator Sănătate Financiară:</span>
+                    <span id="savings-rate-text" class="ml-0 sm:ml-1 font-medium text-gray-700">Se analizează soldul...</span>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div class="bg-white p-6 rounded-xl shadow-sm min-h-[520px] flex flex-col justify-between">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+
+                <div class="bg-white p-5 md:p-6 rounded-xl shadow-sm min-h-[480px] md:min-h-[520px] flex flex-col justify-between">
                     <div>
-                        <h3 class="text-lg font-bold mb-4">Distribuție Cheltuieli</h3>
-                        <div id="chart-container" class="h-64">
+                        <h3 class="text-lg font-bold mb-4 text-gray-800">Distribuție Cheltuieli</h3>
+                        <div id="chart-container" class="h-64 relative">
                             <canvas id="expenseChart"></canvas>
                         </div>
                     </div>
@@ -130,19 +165,20 @@
                     </div>
                 </div>
 
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-indigo-100 bg-indigo-50 flex flex-col">
-                    <h3 class="text-indigo-800 font-bold flex items-center mb-4">
-                        <i class="fas fa-robot mr-2"></i> Sinteză consultativă automatizată
-                    </h3>
-                    <div class="flex-1 flex flex-col justify-center">
-                        <p id="ai-advice" class="text-gray-700 italic leading-relaxed text-lg">
+                <div class="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-indigo-100 bg-indigo-50 flex flex-col justify-between min-h-[250px] lg:min-h-auto">
+                    <div>
+                        <h3 class="text-indigo-800 font-bold flex items-center mb-4">
+                            <i class="fas fa-robot mr-2"></i> Sinteză consultativă automatizată
+                        </h3>
+                        <p id="ai-advice" class="text-gray-700 italic leading-relaxed text-base md:text-lg">
                             "Analizăm datele tale..."
                         </p>
                     </div>
-                    <div class="mt-4 text-xs text-indigo-400 font-bold">
+                    <div class="mt-6 text-[10px] text-indigo-400 font-bold uppercase tracking-wider">
                         Sursă: K-Means Clustering
                     </div>
                 </div>
+
             </div>
         </main>
     </div>
@@ -152,15 +188,22 @@
         const token = sessionStorage.getItem('token');
         let chartInstance = null;
 
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
+
         function logout() {
             sessionStorage.removeItem('token');
             window.location.href = "/auth";
         }
 
-        // --- MICRO-INTERACȚIUNE: ANIMATIE COUNTUP EFECT ---
         function animateValue(id, target) {
             let startTimestamp = null;
-            const duration = 450; // Timp execuție animație (milisecunde)
+            const duration = 450;
 
             function step(timestamp) {
                 if (!startTimestamp) startTimestamp = timestamp;
@@ -194,7 +237,6 @@
                     document.getElementById('filter-month').value = data.selected_month;
                     document.getElementById('filter-year').value = data.selected_year;
 
-                    // Lansăm efectul de numărare asincronă pentru carduri
                     animateValue('total-venit', data.total_venit);
                     animateValue('total-cheltuieli', data.total_cheltuieli);
 
@@ -209,7 +251,6 @@
                         rateTextEl.innerHTML = `Deficit bugetar de <strong class="text-red-500 font-bold">${Math.abs(rEcon)}%</strong>. Cheltuielile au depășit încasările din această lună.`;
                     }
 
-                    // AFISARE COMERCIANTI CURATATI (FARA TRANSFERURI)
                     const merchantsContainer = document.getElementById('top-merchants-container');
                     merchantsContainer.innerHTML = '';
 
@@ -217,11 +258,11 @@
                         data.top_comercianti.forEach((item, index) => {
                             merchantsContainer.innerHTML += `
                                 <div class="flex justify-between items-center bg-gray-50 p-2.5 rounded-lg text-sm border border-gray-100">
-                                    <div class="flex items-center gap-2">
-                                        <span class="w-5 h-5 flex items-center justify-center bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold">${index + 1}</span>
-                                        <span class="font-semibold text-gray-700">${item.nume}</span>
+                                    <div class="flex items-center gap-2 overflow-hidden">
+                                        <span class="w-5 h-5 flex-shrink-0 flex items-center justify-center bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold">${index + 1}</span>
+                                        <span class="font-semibold text-gray-700 truncate">${item.nume}</span>
                                     </div>
-                                    <span class="font-bold text-red-500">-${item.suma.toFixed(2)} RON</span>
+                                    <span class="font-bold text-red-500 flex-shrink-0 ml-2">-${item.suma.toFixed(2)} RON</span>
                                 </div>
                             `;
                         });
@@ -252,7 +293,7 @@
                     nameEl.innerText = persona.nume;
                     document.getElementById('ai-advice').innerText = `"${persona.desc}"`;
 
-                    cardEl.className = "bg-white p-6 rounded-xl shadow-sm border-l-4 transition-all duration-500";
+                    cardEl.className = "bg-white p-5 md:p-6 rounded-xl shadow-sm border-l-4 transition-all duration-500";
                     nameEl.className = "text-xl font-bold transition-all duration-500";
 
                     if (persona.cluster_id === 0) {
@@ -290,13 +331,40 @@
                 },
                 options: {
                     maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom', labels: { padding: 15, usePointStyle: true } } },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { padding: 12, usePointStyle: true, boxWidth: 10, font: { size: 11 } }
+                        }
+                    },
                     cutout: '70%'
                 }
             });
         }
 
-        window.onload = () => initDashboard();
+        window.onload = () => {
+            initDashboard();
+
+            // MODIFICARE SPECIALĂ: Decodificăm token-ul local pentru a afla dacă este un utilizator înregistrat prin Google
+            try {
+                if (token) {
+                    const base64Url = token.split('.')[1];
+                    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                    }).join(''));
+
+                    // Pentru utilizatorii Google OAuth nu avem un hash securizat, login-ul clasic folosește Bcrypt.
+                    // Verificăm dacă utilizatorul nu a salvat încă profilul ȘI dacă s-a logat prin Google.
+                    // Pentru a asigura o funcționare perfectă, flag-ul 'is_google_user' este salvat în auth.html la conectare.
+                    if (sessionStorage.getItem('is_google_user') === 'true' && !localStorage.getItem('profile_updated')) {
+                        document.getElementById('profile-warning-banner').classList.remove('hidden');
+                    }
+                }
+            } catch(e) {
+                console.error("Eroare verificare tip utilizator:", e);
+            }
+        };
     </script>
 </body>
 </html>
