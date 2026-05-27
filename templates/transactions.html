@@ -50,6 +50,9 @@
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 md:mb-8">
                 <h1 class="text-2xl md:text-3xl font-bold">Management Tranzacții</h1>
                 <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <button onclick="openExportModal()" class="w-full sm:w-auto justify-center bg-amber-600 text-white px-5 py-2.5 rounded-lg font-bold hover:bg-amber-700 transition flex items-center">
+                        <i class="fas fa-file-download mr-2"></i> Exportă CSV
+                    </button>
                     <button onclick="openImportGuidance()" class="w-full sm:w-auto justify-center bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-bold hover:bg-indigo-700 transition flex items-center">
                         <i class="fas fa-file-upload mr-2"></i> Încarcă Tranzacții
                     </button>
@@ -215,6 +218,26 @@
         </div>
     </div>
 
+    <div id="exportModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-md">
+            <h2 class="text-xl font-bold mb-5 text-gray-800">Exportă Tranzacții în format CSV</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Data de început:</label>
+                    <input type="date" id="exp-start-date" class="w-full p-3 border rounded-xl outline-none text-sm focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Data de sfârșit:</label>
+                    <input type="date" id="exp-end-date" class="w-full p-3 border rounded-xl outline-none text-sm focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+            <div class="flex space-x-3 mt-6">
+                <button onclick="closeExportModal()" class="flex-1 py-2.5 text-gray-400 font-bold text-sm">Anulează</button>
+                <button onclick="triggerCsvExport()" class="flex-1 py-2.5 bg-amber-600 text-white rounded-xl font-bold hover:bg-amber-700 text-sm transition">Descarcă Fișierul</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_URL = window.location.origin;
         const token = sessionStorage.getItem('token');
@@ -229,6 +252,53 @@
 
         function openImportGuidance() { document.getElementById('importGuidanceModal').classList.remove('hidden'); }
         function closeImportGuidance() { document.getElementById('importGuidanceModal').classList.add('hidden'); }
+
+        function openExportModal() { document.getElementById('exportModal').classList.remove('hidden'); }
+        function closeExportModal() { document.getElementById('exportModal').classList.add('hidden'); }
+
+        async function triggerCsvExport() {
+            const startDate = document.getElementById('exp-start-date').value;
+            const endDate = document.getElementById('exp-end-date').value;
+
+            if (!startDate || !endDate) {
+                alert("Te rog să configurezi ambele limite de timp pentru export.");
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/api/export-transactions-csv`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-access-token': token
+                    },
+                    body: JSON.stringify({ start_date: startDate, end_date: endDate })
+                });
+
+                if (res.status === 404) {
+                    alert("Nu s-au detectat tranzacții în interiorul perioadei transmise.");
+                    return;
+                }
+                if (!res.ok) {
+                    const errData = await res.json();
+                    alert("Eroare la export: " + (errData.error || "Eroare internă server."));
+                    return;
+                }
+
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `export_tranzactii_${startDate}_${endDate}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+                closeExportModal();
+            } catch (err) {
+                alert("Eroare de comunicație cu serverul.");
+            }
+        }
 
         async function importStandardFile() {
             const fileInput = document.getElementById('standardFileInput');

@@ -668,6 +668,60 @@ def get_all_transactions(current_user):
     return jsonify(filtered_list), 200
 
 
+@app.route('/api/export-transactions-csv', methods=['POST'])
+@token_required
+def export_transactions_csv(current_user):
+    data = request.get_json()
+    start_date_str = data.get('start_date')
+    end_date_str = data.get('end_date')
+
+    try:
+        start_dt = datetime.strptime(start_date_str, "%Y-%m-%d") if start_date_str else None
+        end_dt = datetime.strptime(end_date_str, "%Y-%m-%d") if end_date_str else None
+    except ValueError:
+        return jsonify({"error": "Formatul datei selectate este invalid."}), 400
+
+    transactions = list(db.transactions.find({"user_id": current_user['_id']}))
+
+    luni_map = {
+        "ianuarie": 1, "februarie": 2, "martie": 3, "aprilie": 4, "mai": 5, "iunie": 6,
+        "iulie": 7, "august": 8, "septembrie": 9, "octombrie": 10, "noiembrie": 11, "decembrie": 12
+    }
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Data", "Suma", "Detalii", "Categorie", "Tip"])
+
+    count = 0
+    for t in transactions:
+        try:
+            parts = t['data'].lower().split()
+            day = int(parts[0])
+            month = luni_map.get(parts[1], 1)
+            year = int(parts[2])
+            tx_dt = datetime(year, month, day)
+        except Exception:
+            continue
+
+        if start_dt and tx_dt < start_dt:
+            continue
+        if end_dt and tx_dt > end_dt:
+            continue
+
+        writer.writerow([t['data'], t['suma'], t.get('detalii', ''), t.get('categorie', ''), t.get('tip', '')])
+        count += 1
+
+    if count == 0:
+        return jsonify({"error": "Nu s-au găsit tranzacții în perioada selectată."}), 404
+
+    response = app.response_class(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={"Content-disposition": f"attachment; filename=export_{start_date_str}_{end_date_str}.csv"}
+    )
+    return response
+
+
 @app.route('/delete-transaction/<t_id>', methods=['DELETE'])
 @token_required
 def delete_transaction(current_user, t_id):
@@ -1057,7 +1111,7 @@ def get_financial_persona(current_user):
             },
             3: {
                 "nume": "Profil Expus (Restricționat Bugetar)",
-                "desc": "Acest segment prezintă o elasticitate redusă a bugetului individual, unde cheltuielile totale converg spre plafonul veniturilor disposable, generând o vulnerabilitate ridicată în fața unor eventuale șocuri de lichiditate."
+                "desc": "Acest segment prezintă o elasticitate redusă a bugetului individual, unde cheltuielile totale converg spre plafonul veniturilor disposable, generând o vulnerabilitate gradată în fața unor eventuale șocuri de lichiditate."
             }
         }
 
